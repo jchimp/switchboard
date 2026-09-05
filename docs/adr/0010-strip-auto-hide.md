@@ -11,6 +11,13 @@ ADR-0006 says the strip "must be visible at all times". Even at 8 px, some users
 - **Attention overrides auto-hide**: while any terminal is in Attention, the strip slides out to full thickness and stays out until the terminal is focused (invariant 6: attention is sticky). This is permitted unprompted motion under invariant 10 — attention is the one thing allowed to move.
 - The attention pulse becomes a **color** pulse (segment color ↔ lightened variant) instead of an opacity pulse, implemented as a white overlay fading in and out above the segment. It reads at 2 px where an opacity dip would not, per-item brushes stay frozen, and it removes a latent conflict where the old animation held `Opacity` against its view-model binding.
 
+## Amendment (2026-09-04, with ADR-0012)
+When `openRailOnHover` is on, hovering the sliver no longer expands the strip — expanding
+it and then sliding the rail out read as two chained bounces. The sliver is only the
+trigger surface; the rail is the single motion, and it covers the strip from the screen
+edge while open. Attention still expands the strip (R24). With `openRailOnHover` off,
+hover-expand behaves as originally decided.
+
 ## Consequences
 - ADR-0006's "visible at all times" is relaxed to "a colored sliver is visible at all times" when auto-hide is on.
 - Auto-hide and app-bar mode (`reserveScreenSpace`) are alternatives; enabling both is allowed but the reserved band shrinks to the sliver only if the user accepts the app-bar re-registering on every collapse — v1 simply ignores `autoHide` when app-bar mode is on.
