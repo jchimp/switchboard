@@ -20,3 +20,14 @@ Restart recovery (`RecoverByTitle`) is best-effort: prefix match on the name. Un
 - Registry names must be valid, unique, and used verbatim as titles. The name regex enforces it.
 - A shell that overwrites the title within the first few ms could beat the hook; in practice WT shows the window with the `--title` value first. If this bites, `lockTitle` is the escape hatch.
 - Two terminals launched in the same 15 s window with different names bind correctly; two with the *same* name is impossible (unique names).
+
+## Amendment (2026-09-05): HWND-first restart recovery
+
+Daily use showed title recovery failing routinely: shells retitle their windows constantly,
+so after a manager restart most live terminals landed in "unbound" and needed manual
+adoption. Fix: every bind writes the HWND to the terminal's registry row (`lastHwnd` —
+runtime state, but the registry is the only durable store, invariant 3). Recovery now runs
+two passes: `RecoverByHwnd` first (handles survive a manager restart; a stale handle after
+a reboot fails `IsTerminalWindow` validation and is skipped), then `RecoverByTitle` for
+whatever remains. Residual risk: a recycled HWND that happens to be a *different* WT window
+mis-binds — vanishingly rare within one logon session, and one click in the rail fixes it.
