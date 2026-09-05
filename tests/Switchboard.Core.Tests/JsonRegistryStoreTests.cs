@@ -57,6 +57,20 @@ public sealed class JsonRegistryStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Last_hwnd_round_trips_and_defaults_to_null()
+    {
+        var store = new JsonRegistryStore(PathFor("registry.json"));
+        await store.SaveAsync(new RegistryFile
+        {
+            Terminals = [new TerminalDefinition { Name = "anvil", Color = "#B07CF5", Profile = "Ubuntu", LastHwnd = 0x1234 }],
+        });
+
+        var loaded = await store.LoadAsync();
+        Assert.Equal(0x1234, loaded.Terminals[0].LastHwnd);
+        Assert.Null(new TerminalDefinition { Name = "x", Color = "#000000", Profile = "p" }.LastHwnd);
+    }
+
+    [Fact]
     public async Task Taskbar_and_auto_hide_settings_round_trip()
     {
         var store = new JsonRegistryStore(PathFor("registry.json"));
