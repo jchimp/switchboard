@@ -44,6 +44,7 @@ public partial class App : Application
         services.AddSingleton<ITerminalLauncher, ProcessTerminalLauncher>();
         services.AddSingleton<FrameColorizer>();
         services.AddSingleton<TaskbarVisibility>();
+        services.AddSingleton<AppBar>();
         services.AddSingleton<WindowTracker>();
         services.AddSingleton<GlobalHotkeyManager>();
         services.AddSingleton<TerminalSession>();
