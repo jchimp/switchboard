@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Switchboard.App.Services;
 using Switchboard.Core.Registry;
 using Switchboard.Core.Status;
+using Switchboard.Windows.Tracking;
 
 namespace Switchboard.App.ViewModels;
 
@@ -29,6 +30,14 @@ public sealed partial class RailViewModel : ObservableObject
 
     public ObservableCollection<RailItemViewModel> Items { get; } = [];
 
+    /// <summary>
+    /// Windows Terminal windows on the desktop not bound to any registered name. Refreshed
+    /// only when the rail opens (or the user asks) — never on a timer (R7).
+    /// </summary>
+    public ObservableCollection<UnboundWindow> UnboundItems { get; } = [];
+
+    public bool HasUnbound => UnboundItems.Count > 0;
+
     public StripSettings Settings => _session.Registry.Strip;
 
     public bool IsVertical => RailPlacementIsVertical;
@@ -53,6 +62,43 @@ public sealed partial class RailViewModel : ObservableObject
 
     [RelayCommand]
     private void Quit() => System.Windows.Application.Current.Shutdown();
+
+    /// <summary>Re-enumerates unbound windows. Call on rail-open, and from the manual Refresh affordance.</summary>
+    public void RefreshUnbound()
+    {
+        UnboundItems.Clear();
+        foreach (var w in _session.UnboundWindows())
+        {
+            UnboundItems.Add(w);
+        }
+
+        OnPropertyChanged(nameof(HasUnbound));
+    }
+
+    /// <summary>Registered terminals with no live window — the offer list for "adopt as…" (R7).</summary>
+    public IReadOnlyList<TerminalDefinition> AdoptableTerminals() => _session.AdoptableTerminals();
+
+    public bool Adopt(nint hwnd, string name)
+    {
+        var ok = _session.AdoptAsync(name, hwnd);
+        if (ok)
+        {
+            RefreshUnbound();
+        }
+
+        return ok;
+    }
+
+    public async Task<bool> AdoptAsNewAsync(nint hwnd)
+    {
+        var ok = await _session.AdoptAsNewAsync(_quick.BuildDefinition(persistent: true), hwnd);
+        if (ok)
+        {
+            RefreshUnbound();
+        }
+
+        return ok;
+    }
 
     /// <summary>Incremental resync against the registry: upsert in order, drop the missing.</summary>
     public void Sync()
