@@ -1,7 +1,7 @@
 # Project Progress
 
 ## Current Focus
-M2 underway, slice-by-slice with manual verification between slices (plan approved 2026-09-04). Slice 1 (app-bar mode + hide over fullscreen, ADR-0011) is code-complete and awaits manual verification. M1 exit (daily-use week) runs in parallel.
+All six M2 slices are code-complete (ADRs 0011–0014, plus amendments to 0002/0010/0012). Remaining for M2 exit: manual verification of Slices 4 and 6, the measured motion-sampling CPU number for ADR-0013, and daily use. M1 exit (daily-use week) runs in parallel.
 
 ## M2 Slices
 - [x] Slice 1: app-bar mode (`reserveScreenSpace`) + hide over fullscreen — ADR-0011; verified by Jeremy
@@ -12,7 +12,8 @@ M2 underway, slice-by-slice with manual verification between slices (plan approv
 - [ ] Manual verify Slice 4: unfocused terminal running visible output goes Working within ~1–3 s and decays to Idle ~20 s after it stops; the focused terminal and Attention terminals are unaffected; Switchboard CPU with 5 idle terminals ≈0.1% or less in Task Manager (record the number in ADR-0013's Consequences); `"thumbnailMotionEnabled": false` in the JSON turns it off live
 - [x] Slice 5: adopt unbound windows (R7) — needs manual verify
 - [ ] Manual verify Slice 5: open a plain `wt` window outside Switchboard, open the rail, confirm it appears under "Unbound"; "Adopt as…" a Closed registered terminal — frame colors, taskbar button hides (if enabled), status goes live, focus does not move; "Adopt as… New terminal…" registers and binds it as a new persistent entry; Refresh re-scans
-- [ ] Slice 6: inline rename/recolor — ADR-0014 first
+- [x] Slice 6: inline rename/recolor — ADR-0014; needs manual verify
+- [ ] Manual verify Slice 6: hover a rail row → pencil appears; click → popup takes focus, edit name and/or pick a swatch, Enter saves (Esc cancels) and focus returns to the window you came from; recolor repaints the frame + strip instantly and persists (~2 s); live rename keeps the window bound (jump hotkey still works, Attention survives); invalid/duplicate names show inline errors; "Adopt as… → New terminal…" opens the same popup pre-seeded; restart Switchboard after a rename → the renamed terminal recovers by handle
 
 ## Open Todos
 - [x] First Windows build: fix compiler/analyzer errors, tests green
@@ -31,6 +32,14 @@ M2 underway, slice-by-slice with manual verification between slices (plan approv
 - [x] Verify Attention fires within 2 s for an AI harness waiting on input (PRD success criterion)
 
 ## Progress Log
+
+### 2026-09-05
+- Slice 5 hardware bugs fixed: top-edge foot rotated to a right column (the bottom dock was crushing the card list — the "disappearing thumbnails"), first-open orientation re-applied post-layout, unbound list capped with its own scrollbar.
+- Restart recovery made HWND-first (ADR-0002 amendment): binds persist `lastHwnd`; log-verified 3/3 recovered by handle where title matching failed. Rail also gained the strip's context menu (it covers the strip while open).
+- Slice 6 done (last M2 slice), ADR-0014: live rename applies everywhere now — `WindowTracker.Rekey` keeps the HWND bound, `StatusEngine.Renamed` carries Attention across (new test), `TerminalSession.UpdateTerminalAsync` coordinates and persists.
+- `RailEditPopup` is the product's one activatable window: pencil-on-hover rename/recolor and "Adopt as… → New terminal…", palette swatches, inline errors, focus captured and restored on close. Recolor rides the popup rather than a separate flyout (noted in ADR-0014).
+- 85/85 tests; rail render smoke-verified by screenshot automation (launch → hotkey → capture).
+- Next: Jeremy verifies Slices 4 and 6, records the motion-sampling CPU number in ADR-0013, then M2 exit via daily use.
 
 ### 2026-09-04
 - First successful Windows build: fixed TFM/platform mismatch, brace-style errors, App-layer P/Invoke leak (new `WindowStyler` wrapper), and an invalid XAML trigger target; 34 tests green. Needs x64 .NET 8 Desktop Runtime installed (only x86 was present).
