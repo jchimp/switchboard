@@ -300,6 +300,14 @@ public sealed class TerminalSession : IDisposable
         if (Definition(tw.Name) is { } def)
         {
             _status.TitleChanged(def, title);
+
+            // Focus is the one sanctioned clear (invariant 6), and this window already
+            // has it — without this, attention raised while focused would pulse until
+            // the user focused away and back.
+            if (tw.Name == _foregroundName)
+            {
+                _status.Focused(tw.Name);
+            }
         }
     }
 
