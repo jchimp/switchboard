@@ -8,6 +8,7 @@ using Switchboard.App.Services;
 using Switchboard.App.ViewModels;
 using Switchboard.Core.Screen;
 using Switchboard.Windows;
+using Switchboard.Windows.Tracking;
 
 namespace Switchboard.App.Rail;
 
@@ -127,14 +128,10 @@ public partial class RailWindow : Window, IDisposable
         var open = RailPlacement.Compute(monitor, s.Edge, 0, size);
         var hidden = RailPlacement.ComputeHidden(monitor, s.Edge, 0, size);
 
-        if (FindPanel() is { } panel)
-        {
-            panel.Orientation = vertical ? Orientation.Vertical : Orientation.Horizontal;
-            ListScroller.VerticalScrollBarVisibility = vertical ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
-            ListScroller.HorizontalScrollBarVisibility = vertical ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
-        }
+        ApplyOrientation(vertical);
 
         _vm.Sync(); // events keep it fresh, but a cheap resync on open is bulletproof
+        _vm.RefreshUnbound(); // R7: the one EnumWindows-shaped scan, run only on open
         _hidingAfterSlide = false;
         _tracksHover = trackHover;
         IsOpen = true;
@@ -153,9 +150,17 @@ public partial class RailWindow : Window, IDisposable
         WindowPlacer.MoveWithoutActivating(helper.Handle, hidden);
         Slide(hidden, open);
 
-        // Register thumbnails as soon as the first layout pass has run — their rects are
-        // client-relative, so they ride along during the slide instead of popping in after.
-        Dispatcher.BeginInvoke(SyncThumbnails, System.Windows.Threading.DispatcherPriority.Loaded);
+        // After the first layout pass: re-apply orientation (the ItemsPanel doesn't exist
+        // until the window has rendered once, so the pre-Show attempt found no panel on the
+        // very first open) and register thumbnails — their rects are client-relative, so
+        // they ride along during the slide instead of popping in after.
+        Dispatcher.BeginInvoke(
+            () =>
+            {
+                ApplyOrientation(vertical);
+                SyncThumbnails();
+            },
+            System.Windows.Threading.DispatcherPriority.Loaded);
         OpenChanged?.Invoke(true);
     }
 
@@ -177,6 +182,23 @@ public partial class RailWindow : Window, IDisposable
     {
         base.OnMouseEnter(e);
         _tracksHover = true; // a hotkey-opened rail becomes hover-tracked once visited
+    }
+
+    private void ApplyOrientation(bool vertical)
+    {
+        if (FindPanel() is { } panel)
+        {
+            panel.Orientation = vertical ? Orientation.Vertical : Orientation.Horizontal;
+        }
+
+        ListScroller.VerticalScrollBarVisibility = vertical ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
+        ListScroller.HorizontalScrollBarVisibility = vertical ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+
+        // The 150-dip top-edge rail has no height for a bottom-docked foot: the unbound
+        // section alone would squeeze the card list to nothing. Concept A rotates the foot
+        // into a right-hand column there.
+        DockPanel.SetDock(FootSection, vertical ? Dock.Bottom : Dock.Right);
+        FootSection.Width = vertical ? double.NaN : 250;
     }
 
     private PixelRect ReverseTarget()
@@ -363,9 +385,48 @@ public partial class RailWindow : Window, IDisposable
 
     private void RailMenu_Closed(object sender, RoutedEventArgs e) => _menuOpen = false;
 
+    private void Refresh_Click(object sender, MouseButtonEventArgs e) => _vm.RefreshUnbound();
+
     private async void NewTerminal_Click(object sender, MouseButtonEventArgs e)
     {
         CloseRail();
         await _vm.NewTerminalCommand.ExecuteAsync(null);
+    }
+
+    /// <summary>
+    /// "Adopt as…": a small menu of Closed registered terminals plus "New terminal…", built
+    /// per click since the offer list changes with registry state. The menu is the same
+    /// sanctioned focus escape hatch as the strip's context menu (ADR-0006/0012).
+    /// </summary>
+    private void AdoptButton_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: UnboundWindow window } element)
+        {
+            return;
+        }
+
+        var menu = new ContextMenu();
+        menu.Opened += RailMenu_Opened;
+        menu.Closed += RailMenu_Closed;
+
+        foreach (var def in _vm.AdoptableTerminals())
+        {
+            var item = new MenuItem { Header = def.Name };
+            item.Click += (_, _) => _vm.Adopt(window.Hwnd, def.Name);
+            menu.Items.Add(item);
+        }
+
+        if (menu.Items.Count > 0)
+        {
+            menu.Items.Add(new Separator());
+        }
+
+        var newItem = new MenuItem { Header = "New terminal…" };
+        newItem.Click += async (_, _) => await _vm.AdoptAsNewAsync(window.Hwnd);
+        menu.Items.Add(newItem);
+
+        element.ContextMenu = menu;
+        menu.PlacementTarget = element;
+        menu.IsOpen = true;
     }
 }
