@@ -58,6 +58,13 @@ public class RailPlacementTests
             RailPlacement.ComputeHidden(monitor, ScreenEdge.Top, 8, 150));
     }
 
+    [Fact]
+    public void Zero_strip_offset_anchors_the_rail_at_the_screen_edge()
+    {
+        var rect = RailPlacement.Compute(Monitor(0, 0), ScreenEdge.Left, stripThicknessDips: 0, railSizeDips: 236);
+        Assert.Equal(new PixelRect(0, 0, 236, 1040), rect);
+    }
+
     [Theory]
     [InlineData(ScreenEdge.Left, true)]
     [InlineData(ScreenEdge.Right, true)]
