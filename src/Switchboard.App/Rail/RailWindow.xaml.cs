@@ -194,7 +194,7 @@ public partial class RailWindow : Window, IDisposable
         ListScroller.VerticalScrollBarVisibility = vertical ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
         ListScroller.HorizontalScrollBarVisibility = vertical ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
 
-        // The 150-dip top-edge rail has no height for a bottom-docked foot: the unbound
+        // The top-edge rail has no height for a bottom-docked foot: the unbound
         // section alone would squeeze the card list to nothing. Concept A rotates the foot
         // into a right-hand column there.
         DockPanel.SetDock(FootSection, vertical ? Dock.Bottom : Dock.Right);

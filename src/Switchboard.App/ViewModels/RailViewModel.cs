@@ -42,8 +42,6 @@ public sealed partial class RailViewModel : ObservableObject
 
     public bool IsVertical => RailPlacementIsVertical;
 
-    public string CountLabel => $"{Items.Count(i => !i.IsClosed)} windows";
-
     private bool RailPlacementIsVertical => Settings.Edge is ScreenEdge.Left or ScreenEdge.Right;
 
     [RelayCommand]
@@ -174,7 +172,6 @@ public sealed partial class RailViewModel : ObservableObject
             });
         }
 
-        OnPropertyChanged(nameof(CountLabel));
         OnPropertyChanged(nameof(IsVertical));
     }
 
@@ -196,7 +193,6 @@ public sealed partial class RailViewModel : ObservableObject
         if (Items.FirstOrDefault(i => i.Name == name) is { } item)
         {
             item.State = state;
-            OnPropertyChanged(nameof(CountLabel));
         }
         else if (_session.Definition(name) is not null)
         {

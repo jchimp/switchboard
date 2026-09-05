@@ -52,7 +52,7 @@ public sealed class JsonRegistryStoreTests : IDisposable
         Assert.Equal(2, loaded.Strip.HiddenThickness);
         Assert.Equal(800, loaded.Strip.CollapseDelayMs);
         Assert.Equal(236, loaded.Strip.RailSizeDips);
-        Assert.Equal(150, loaded.Strip.RailTopHeightDips);
+        Assert.Equal(190, loaded.Strip.RailTopHeightDips);
         Assert.True(loaded.ThumbnailMotionEnabled);
     }
 

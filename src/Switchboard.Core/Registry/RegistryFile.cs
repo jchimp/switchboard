@@ -62,8 +62,9 @@ public sealed record StripSettings
     /// <summary>Rail width in DIPs when docked to a vertical edge (ADR-0012).</summary>
     public int RailSizeDips { get; init; } = 236;
 
-    /// <summary>Rail height in DIPs when docked to the top edge.</summary>
-    public int RailTopHeightDips { get; init; } = 150;
+    /// <summary>Rail height in DIPs when docked to the top edge. Sized to fit one stacked
+    /// card: 115-dip thumb + meta rows + card and scroller padding.</summary>
+    public int RailTopHeightDips { get; init; } = 190;
 
     /// <summary>App-bar mode: reserve the strip's pixels so maximized windows stop at it.</summary>
     public bool ReserveScreenSpace { get; init; }
