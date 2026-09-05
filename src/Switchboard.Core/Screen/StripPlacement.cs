@@ -8,8 +8,15 @@ public readonly record struct PixelRect(int X, int Y, int Width, int Height);
 /// <summary>Platform-neutral snapshot of one monitor. The Windows layer produces these (ADR-0007).</summary>
 public sealed record MonitorBounds
 {
-    /// <summary>Work area (desktop minus taskbar) in physical pixels.</summary>
+    /// <summary>Work area (desktop minus taskbar and app bars) in physical pixels.</summary>
     public required PixelRect WorkArea { get; init; }
+
+    /// <summary>
+    /// Full monitor rect in physical pixels. App-bar placement must start from here, not the
+    /// work area: a registered app bar shrinks the work area by its own band, so re-docking
+    /// from it would walk the strip inward (ADR-0011).
+    /// </summary>
+    public required PixelRect Bounds { get; init; }
 
     /// <summary>Effective DPI scale, 1.0 = 96 dpi.</summary>
     public required double DpiScale { get; init; }
@@ -60,6 +67,23 @@ public static class StripPlacement
             ScreenEdge.Left => new PixelRect(wa.X, wa.Y, px, wa.Height),
             ScreenEdge.Right => new PixelRect(wa.X + wa.Width - px, wa.Y, px, wa.Height),
             _ => new PixelRect(wa.X, wa.Y, wa.Width, px),
+        };
+    }
+
+    /// <summary>
+    /// The band to propose to the shell when registering as an app bar: anchored to the full
+    /// monitor bounds, because the shell's QUERYPOS/SETPOS negotiation clips against the
+    /// taskbar and other app bars but never against our own registration (ADR-0011).
+    /// </summary>
+    public static PixelRect ComputeAppBar(MonitorBounds monitor, ScreenEdge edge, int thicknessDips)
+    {
+        var b = monitor.Bounds;
+        var px = Math.Max(1, (int)Math.Round(thicknessDips * monitor.DpiScale));
+        return edge switch
+        {
+            ScreenEdge.Left => new PixelRect(b.X, b.Y, px, b.Height),
+            ScreenEdge.Right => new PixelRect(b.X + b.Width - px, b.Y, px, b.Height),
+            _ => new PixelRect(b.X, b.Y, b.Width, px),
         };
     }
 }
