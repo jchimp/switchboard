@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
+using Switchboard.App.Services;
 using Switchboard.App.ViewModels;
 using Switchboard.Core.Screen;
 using Switchboard.Windows;
@@ -20,19 +21,26 @@ public partial class StripWindow : Window
 
     private readonly StripViewModel _vm;
     private readonly TaskbarVisibility _taskbarVisibility;
+    private readonly AppBar _appBar;
     private readonly System.Windows.Threading.DispatcherTimer _redockDebounce;
     private readonly System.Windows.Threading.DispatcherTimer _collapseTimer;
     private readonly System.Windows.Threading.DispatcherTimer _slideTimer;
     private bool _collapsed;
+    private bool _fullscreenHidden;
     private PixelRect? _currentRect;
     private PixelRect _slideFrom;
     private PixelRect _slideTo;
     private long _slideStartTicks;
 
-    public StripWindow(StripViewModel vm, TaskbarVisibility taskbarVisibility)
+    public StripWindow(StripViewModel vm, TaskbarVisibility taskbarVisibility, AppBar appBar, TerminalSession session)
     {
         _vm = vm;
         _taskbarVisibility = taskbarVisibility;
+        _appBar = appBar;
+
+        // Fullscreen detection outside app-bar mode rides the tracker's existing foreground
+        // WinEvent (via the session) — no new hook, no polling (ADR-0011).
+        session.ForegroundChanged += _ => CheckForegroundFullscreen();
         InitializeComponent();
         DataContext = vm;
         SourceInitialized += OnSourceInitialized;
@@ -96,8 +104,56 @@ public partial class StripWindow : Window
         {
             TaskbarRecreated?.Invoke();
         }
+        else if (_appBar.HandleCallback(msg, wParam, lParam) is { } notification)
+        {
+            switch (notification)
+            {
+                case AppBarNotification.PositionChanged:
+                    _redockDebounce.Stop();
+                    _redockDebounce.Start();
+                    break;
+                case AppBarNotification.FullscreenEntered when _vm.Settings.HideOverFullscreen:
+                    SetFullscreenHidden(true);
+                    break;
+                case AppBarNotification.FullscreenExited:
+                    SetFullscreenHidden(false);
+                    break;
+            }
+        }
 
         return 0;
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _appBar.Remove(); // an orderly exit must not strand the reserved band (ADR-0011)
+        base.OnClosed(e);
+    }
+
+    private void CheckForegroundFullscreen()
+    {
+        var s = _vm.Settings;
+        if (!s.HideOverFullscreen || s.ReserveScreenSpace)
+        {
+            return; // app-bar mode is told directly via ABN_FULLSCREENAPP
+        }
+
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd != 0)
+        {
+            SetFullscreenHidden(FullscreenDetector.IsForegroundFullscreen(hwnd));
+        }
+    }
+
+    private void SetFullscreenHidden(bool hidden)
+    {
+        if (_fullscreenHidden == hidden)
+        {
+            return;
+        }
+
+        _fullscreenHidden = hidden;
+        Visibility = hidden ? Visibility.Hidden : Visibility.Visible;
     }
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
@@ -189,8 +245,26 @@ public partial class StripWindow : Window
             _collapsed = false; // setting toggled off mid-collapse must not strand a sliver
         }
 
-        var thickness = _collapsed ? Math.Min(s.HiddenThickness, s.Thickness) : s.Thickness;
+        if (!s.HideOverFullscreen)
+        {
+            SetFullscreenHidden(false); // live toggle-off must not strand a hidden strip
+        }
+
         var monitor = StripPlacement.SelectMonitor(monitors, s.Monitor);
+
+        if (s.ReserveScreenSpace)
+        {
+            // App-bar mode: propose from the full monitor bounds and occupy whatever the
+            // shell grants; the work area would include our own band and drift (ADR-0011).
+            var granted = _appBar.Apply(
+                hwnd, s.Edge, StripPlacement.ComputeAppBar(monitor, s.Edge, s.Thickness));
+            _slideTimer.Stop();
+            Apply(hwnd, granted ?? StripPlacement.Compute(monitor, s.Edge, s.Thickness));
+            return;
+        }
+
+        _appBar.Remove();
+        var thickness = _collapsed ? Math.Min(s.HiddenThickness, s.Thickness) : s.Thickness;
         var rect = StripPlacement.Compute(monitor, s.Edge, thickness);
 
         if (animate && _currentRect is { } from && from != rect)
