@@ -89,15 +89,49 @@ public sealed partial class RailViewModel : ObservableObject
         return ok;
     }
 
-    public async Task<bool> AdoptAsNewAsync(nint hwnd)
+    /// <summary>Name/color defaults for the adopt-as-new popup (next free name, next unused hue).</summary>
+    public TerminalDefinition AdoptSeed() => _quick.BuildDefinition(persistent: true);
+
+    /// <summary>Popup commit for adopt-as-new. Returns a user-facing error, or null on success.</summary>
+    public async Task<string?> AdoptAsNewAsync(nint hwnd, string name, string color)
     {
-        var ok = await _session.AdoptAsNewAsync(_quick.BuildDefinition(persistent: true), hwnd);
-        if (ok)
+        var def = AdoptSeed() with { Name = name, Color = color };
+        if (def.Validate() is { } error)
         {
-            RefreshUnbound();
+            return error;
         }
 
-        return ok;
+        if (_session.Definition(def.Name) is not null)
+        {
+            return $"Name '{def.Name}' is already in use.";
+        }
+
+        if (!await _session.AdoptAsNewAsync(def, hwnd))
+        {
+            return "That window is gone; refresh the list.";
+        }
+
+        RefreshUnbound();
+        return null;
+    }
+
+    /// <summary>Popup commit for rename/recolor (ADR-0014). Returns a user-facing error, or null.</summary>
+    public async Task<string?> UpdateTerminalAsync(string oldName, string newName, string color)
+    {
+        if (_session.Definition(oldName) is not { } def)
+        {
+            return "That terminal no longer exists.";
+        }
+
+        try
+        {
+            await _session.UpdateTerminalAsync(oldName, def with { Name = newName, Color = color });
+            return null;
+        }
+        catch (ArgumentException ex)
+        {
+            return ex.Message;
+        }
     }
 
     /// <summary>Incremental resync against the registry: upsert in order, drop the missing.</summary>
