@@ -75,9 +75,9 @@ public partial class StripWindow : Window
         _collapseTimer.Tick += (_, _) =>
         {
             _collapseTimer.Stop();
-            if (AutoHideActive && !IsMouseOver && !_vm.AnyAttention && !_rail.IsOpen)
+            if (AutoHideActive && !IsMouseOver && !_vm.AnyAttention)
             {
-                SetCollapsed(true);
+                SetCollapsed(true); // collapsing under an open rail is fine — it covers us
             }
         };
 
@@ -98,16 +98,12 @@ public partial class StripWindow : Window
         // the rail open must not close it (and the open slide passes under the cursor).
         rail.AnchorHovered = () => IsMouseOver;
 
-        // The rail anchors to the full-thickness strip; collapsing under it would leave a
-        // gap, so auto-hide waits for the rail to close (ADR-0012).
+        // The rail covers the strip from the screen edge while open (ADR-0012 as amended),
+        // so the strip needs no special state while it's out — just resume the collapse
+        // countdown when it goes away.
         rail.OpenChanged += open =>
         {
-            if (open)
-            {
-                _collapseTimer.Stop();
-                SetCollapsed(false);
-            }
-            else if (AutoHideActive && !IsMouseOver && !_vm.AnyAttention)
+            if (!open && AutoHideActive && !IsMouseOver && !_vm.AnyAttention)
             {
                 RestartCollapseTimer();
             }
@@ -204,7 +200,15 @@ public partial class StripWindow : Window
     {
         base.OnMouseEnter(e);
         _collapseTimer.Stop();
-        SetCollapsed(false);
+
+        // With rail-on-hover, the sliver is only the trigger surface: expanding it and then
+        // sliding the rail out reads as two chained bounces, so the rail is the one motion
+        // and the strip stays collapsed (amends ADR-0010; Attention still expands it, R24).
+        if (!(AutoHideActive && _vm.Settings.OpenRailOnHover))
+        {
+            SetCollapsed(false);
+        }
+
         if (_vm.Settings.OpenRailOnHover && !_rail.IsOpen)
         {
             _hoverOpenTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(1, _vm.Settings.HoverOpenDelayMs));
