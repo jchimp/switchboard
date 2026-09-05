@@ -18,20 +18,28 @@ public sealed class QuickLaunchService
 
     public async Task<TerminalDefinition> CreateAndLaunchAsync(string? profile = null, ShellKind? shell = null, string? distro = null)
     {
+        var def = BuildDefinition(profile, shell, distro);
+        await _session.AddTerminalAsync(def);
+        await _session.LaunchAsync(def);
+        return def;
+    }
+
+    /// <summary>
+    /// The quick-launch defaults as a definition, without registering or launching anything.
+    /// Used by "adopt as new…": the window already exists, so nothing here should launch it.
+    /// </summary>
+    internal TerminalDefinition BuildDefinition(string? profile = null, ShellKind? shell = null, string? distro = null, bool? persistent = null)
+    {
         var q = _session.Registry.QuickLaunch;
-        var def = new TerminalDefinition
+        return new TerminalDefinition
         {
             Name = NextName(q.NamePrefix),
             Color = ColorPalette.NextUnused(_session.Registry.Terminals),
             Profile = profile ?? q.DefaultProfile,
             Shell = shell ?? q.DefaultShell,
             Distro = distro ?? q.DefaultDistro,
-            Persistent = q.PersistByDefault,
+            Persistent = persistent ?? q.PersistByDefault,
         };
-
-        await _session.AddTerminalAsync(def);
-        await _session.LaunchAsync(def);
-        return def;
     }
 
     internal string NextName(string prefix)
