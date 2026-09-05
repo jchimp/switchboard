@@ -1,7 +1,7 @@
 # Project Progress
 
 ## Current Focus
-All six M2 slices are code-complete (ADRs 0011–0014, plus amendments to 0002/0010/0012). Remaining for M2 exit: manual verification of Slices 4 and 6, the measured motion-sampling CPU number for ADR-0013, and daily use. M1 exit (daily-use week) runs in parallel.
+M2 code-complete; rail card restyle (stacked, larger thumbnails) on branch `rail-stacked-thumbs` awaiting Jeremy's visual check. Remaining for M2 exit: manual verification of Slices 4 and 6, the measured motion-sampling CPU number for ADR-0013, and daily use.
 
 ## M2 Slices
 - [x] Slice 1: app-bar mode (`reserveScreenSpace`) + hide over fullscreen — ADR-0011; verified by Jeremy
@@ -30,10 +30,17 @@ All six M2 slices are code-complete (ADRs 0011–0014, plus amendments to 0002/0
 - [x] Manual verify strip auto-hide: collapse to sliver, hover slide-out, Attention pulse + slide-out until focused
 - [ ] M1 exit: run daily for a week; tune status rules against real WT titles
 - [x] Verify Attention fires within 2 s for an AI harness waiting on input (PRD success criterion)
+- [ ] Visual check of `rail-stacked-thumbs` branch (both edges), then merge to main
+- [ ] Update `railTopHeightDips` 150 → 190 in the live registry.json (old value clips the top-edge cards)
 
 ## Progress Log
 
 ### 2026-09-05
+- Rail card restyle on branch `rail-stacked-thumbs` (dbfe346): stacked layout — name/badge/pencil under a full-width 204×115 thumbnail (was 76×46 side-by-side), 16:9 so DWM stops letterboxing; "Terminals" header row removed.
+- Constraint learned: DWM composites live thumbnails above the rail's own visuals, so nothing can overlay the thumb slot — the jump-key badge moved to the name row (mockup's overlay idea is dead for live thumbs).
+- `RailTopHeightDips` default 150 → 190 (fits one stacked card; no version bump); mockup `layout-concepts.html` updated to match the XAML.
+- Build clean, 85/85 tests; app smoke-launched OK. Not yet visually verified — and Jeremy's live registry still serializes 150, which will clip the top-edge rail until edited.
+- Next: Jeremy eyeballs the new rail on both edges, merges the branch, then the standing Slice 4/6 verifications.
 - Slice 5 hardware bugs fixed: top-edge foot rotated to a right column (the bottom dock was crushing the card list — the "disappearing thumbnails"), first-open orientation re-applied post-layout, unbound list capped with its own scrollbar.
 - Restart recovery made HWND-first (ADR-0002 amendment): binds persist `lastHwnd`; log-verified 3/3 recovered by handle where title matching failed. Rail also gained the strip's context menu (it covers the strip while open).
 - Slice 6 done (last M2 slice), ADR-0014: live rename applies everywhere now — `WindowTracker.Rekey` keeps the HWND bound, `StatusEngine.Renamed` carries Attention across (new test), `TerminalSession.UpdateTerminalAsync` coordinates and persists.
