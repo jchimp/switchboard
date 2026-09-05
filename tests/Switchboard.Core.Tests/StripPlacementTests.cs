@@ -6,8 +6,16 @@ namespace Switchboard.Core.Tests;
 
 public class StripPlacementTests
 {
-    private static MonitorBounds Monitor(int x, int y, int width = 1920, int height = 1040, double scale = 1.0, bool primary = false) =>
-        new() { WorkArea = new PixelRect(x, y, width, height), DpiScale = scale, IsPrimary = primary };
+    private static MonitorBounds Monitor(
+        int x, int y, int width = 1920, int height = 1040, double scale = 1.0, bool primary = false,
+        PixelRect? bounds = null) =>
+        new()
+        {
+            WorkArea = new PixelRect(x, y, width, height),
+            Bounds = bounds ?? new PixelRect(x, y, width, height),
+            DpiScale = scale,
+            IsPrimary = primary,
+        };
 
     [Fact]
     public void Primary_monitor_is_index_zero_regardless_of_enumeration_order()
@@ -83,5 +91,30 @@ public class StripPlacementTests
     public void Empty_monitor_list_is_rejected()
     {
         Assert.Throws<ArgumentException>(() => StripPlacement.SelectMonitor([], 0));
+    }
+
+    [Fact]
+    public void App_bar_band_anchors_to_full_monitor_bounds_not_work_area()
+    {
+        // Work area already shrunk by a 40 px taskbar at top; the proposal must ignore it (ADR-0011).
+        var monitor = Monitor(0, 40, 1920, 1000, bounds: new PixelRect(0, 0, 1920, 1080));
+        var rect = StripPlacement.ComputeAppBar(monitor, ScreenEdge.Top, thicknessDips: 8);
+        Assert.Equal(new PixelRect(0, 0, 1920, 8), rect);
+    }
+
+    [Fact]
+    public void App_bar_band_scales_thickness_per_monitor_dpi()
+    {
+        var monitor = Monitor(0, 0, 2560, 1400, scale: 1.5, bounds: new PixelRect(0, 0, 2560, 1440));
+        var rect = StripPlacement.ComputeAppBar(monitor, ScreenEdge.Left, thicknessDips: 8);
+        Assert.Equal(new PixelRect(0, 0, 12, 1440), rect);
+    }
+
+    [Fact]
+    public void App_bar_band_hugs_right_bound()
+    {
+        var monitor = Monitor(-1920, 0, 1920, 1040, bounds: new PixelRect(-1920, 0, 1920, 1080));
+        var rect = StripPlacement.ComputeAppBar(monitor, ScreenEdge.Right, thicknessDips: 8);
+        Assert.Equal(new PixelRect(-8, 0, 8, 1080), rect);
     }
 }
