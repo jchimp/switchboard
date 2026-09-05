@@ -2,6 +2,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
+using Microsoft.Extensions.Logging;
+using Switchboard.App.Services;
 using Switchboard.App.ViewModels;
 using Switchboard.Core.Screen;
 using Switchboard.Windows;
@@ -13,11 +16,14 @@ namespace Switchboard.App.Rail;
 /// (ADR-0012). Hidden, not closed, between uses. Opens on strip hover or the toggleRail
 /// chord; closes when the mouse leaves it or on the chord again. Never takes focus.
 /// </summary>
-public partial class RailWindow : Window
+public partial class RailWindow : Window, IDisposable
 {
     private const int SlideDurationMs = 220;
 
     private readonly RailViewModel _vm;
+    private readonly TerminalSession _session;
+    private readonly ILogger<WindowThumbnail> _thumbLog;
+    private readonly Dictionary<string, WindowThumbnail> _thumbnails = new(StringComparer.Ordinal);
     private readonly System.Windows.Threading.DispatcherTimer _slideTimer;
     private readonly System.Windows.Threading.DispatcherTimer _hoverProbe;
     private PixelRect _slideFrom;
@@ -25,10 +31,13 @@ public partial class RailWindow : Window
     private long _slideStartTicks;
     private bool _hidingAfterSlide;
     private bool _tracksHover;
+    private bool _menuOpen;
 
-    public RailWindow(RailViewModel vm)
+    public RailWindow(RailViewModel vm, TerminalSession session, ILogger<WindowThumbnail> thumbLog)
     {
         _vm = vm;
+        _session = session;
+        _thumbLog = thumbLog;
         InitializeComponent();
         DataContext = vm;
         SourceInitialized += (_, _) =>
@@ -53,14 +62,26 @@ public partial class RailWindow : Window
                 return;
             }
 
-            if (_tracksHover && !IsMouseOver && AnchorHovered?.Invoke() != true)
+            // The context menu is outside the rail's bounds; don't close under it.
+            if (_tracksHover && !_menuOpen && !IsMouseOver && AnchorHovered?.Invoke() != true)
             {
                 CloseRail();
             }
         };
+
+        // Thumbnails must track row position (new/removed rows, scroll, resize) and row
+        // liveness (a terminal opening/closing). Cheap when the rail is hidden — all these
+        // no-op unless IsOpen.
+        _vm.Items.CollectionChanged += (_, _) =>
+            Dispatcher.BeginInvoke(SyncThumbnails, System.Windows.Threading.DispatcherPriority.Background);
+        _session.StateChanged += (_, _) => SyncThumbnails();
+        SizeChanged += (_, _) => SyncThumbnails();
     }
 
     public bool IsOpen { get; private set; }
+
+    /// <summary>True while the open/close slide is animating; motion sampling yields to it.</summary>
+    public bool IsSliding => _slideTimer.IsEnabled;
 
     /// <summary>The strip listens: while the rail is open the auto-hidden strip stays out.</summary>
     public event Action<bool>? OpenChanged;
@@ -99,8 +120,12 @@ public partial class RailWindow : Window
         var vertical = RailPlacement.IsVertical(s.Edge);
         var size = vertical ? s.RailSizeDips : s.RailTopHeightDips;
         var monitor = StripPlacement.SelectMonitor(monitors, s.Monitor);
-        var open = RailPlacement.Compute(monitor, s.Edge, s.Thickness, size);
-        var hidden = RailPlacement.ComputeHidden(monitor, s.Edge, s.Thickness, size);
+
+        // Zero strip offset: the rail anchors at the screen edge and covers the strip while
+        // open (Concept A, ADR-0012 as amended) — its geometry never depends on whether the
+        // strip is currently a sliver, full, or attention-expanded.
+        var open = RailPlacement.Compute(monitor, s.Edge, 0, size);
+        var hidden = RailPlacement.ComputeHidden(monitor, s.Edge, 0, size);
 
         if (FindPanel() is { } panel)
         {
@@ -127,6 +152,10 @@ public partial class RailWindow : Window
         Show();
         WindowPlacer.MoveWithoutActivating(helper.Handle, hidden);
         Slide(hidden, open);
+
+        // Register thumbnails as soon as the first layout pass has run — their rects are
+        // client-relative, so they ride along during the slide instead of popping in after.
+        Dispatcher.BeginInvoke(SyncThumbnails, System.Windows.Threading.DispatcherPriority.Loaded);
         OpenChanged?.Invoke(true);
     }
 
@@ -161,7 +190,7 @@ public partial class RailWindow : Window
 
         var vertical = RailPlacement.IsVertical(s.Edge);
         var size = vertical ? s.RailSizeDips : s.RailTopHeightDips;
-        return RailPlacement.ComputeHidden(StripPlacement.SelectMonitor(monitors, s.Monitor), s.Edge, s.Thickness, size);
+        return RailPlacement.ComputeHidden(StripPlacement.SelectMonitor(monitors, s.Monitor), s.Edge, 0, size);
     }
 
     private void Slide(PixelRect from, PixelRect to)
@@ -195,10 +224,108 @@ public partial class RailWindow : Window
             if (_hidingAfterSlide)
             {
                 _hidingAfterSlide = false;
+                UnregisterAllThumbnails(); // the destination window is going invisible
                 Hide();
+            }
+            else
+            {
+                SyncThumbnails(); // open slide finished; rows are laid out, positions are final
             }
         }
     }
+
+    private void ListScroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (IsOpen)
+        {
+            SyncThumbnails();
+        }
+    }
+
+    /// <summary>
+    /// Registers/repositions a DWM thumbnail for every row with a live window, and drops
+    /// thumbnails for rows that closed or scrolled/resized away. All rects are relative to
+    /// this window's own client area — one destination window hosts every row (Slice 3).
+    /// </summary>
+    private void SyncThumbnails()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == 0 || !IsOpen)
+        {
+            return;
+        }
+
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var item in _vm.Items)
+        {
+            var source = _session.HwndOf(item.Name);
+            if (source == 0)
+            {
+                continue; // Closed; the placeholder background shows through
+            }
+
+            if (Rows.ItemContainerGenerator.ContainerFromItem(item) is not ContentPresenter presenter ||
+                presenter.ContentTemplate?.FindName("ThumbSlot", presenter) is not FrameworkElement slot ||
+                slot.ActualWidth <= 0 || slot.ActualHeight <= 0)
+            {
+                continue; // not realized yet, or scrolled out of the visual tree
+            }
+
+            Point origin;
+            try
+            {
+                origin = slot.TranslatePoint(new Point(0, 0), this);
+            }
+            catch (InvalidOperationException)
+            {
+                continue; // disconnected from the visual tree mid-layout-pass
+            }
+
+            var rect = new PixelRect(
+                (int)Math.Round(origin.X * dpi.DpiScaleX),
+                (int)Math.Round(origin.Y * dpi.DpiScaleY),
+                (int)Math.Round(slot.ActualWidth * dpi.DpiScaleX),
+                (int)Math.Round(slot.ActualHeight * dpi.DpiScaleY));
+
+            if (!_thumbnails.TryGetValue(item.Name, out var thumb))
+            {
+                thumb = new WindowThumbnail(_thumbLog);
+                if (!thumb.Register(hwnd, source))
+                {
+                    continue;
+                }
+
+                _thumbnails[item.Name] = thumb;
+            }
+            else if (!thumb.IsRegistered && !thumb.Register(hwnd, source))
+            {
+                continue; // the terminal relaunched under the same name; re-registration failed
+            }
+
+            thumb.UpdateDestination(rect);
+            seen.Add(item.Name);
+        }
+
+        foreach (var name in _thumbnails.Keys.Where(n => !seen.Contains(n)).ToList())
+        {
+            _thumbnails[name].Dispose();
+            _thumbnails.Remove(name);
+        }
+    }
+
+    private void UnregisterAllThumbnails()
+    {
+        foreach (var thumb in _thumbnails.Values)
+        {
+            thumb.Dispose();
+        }
+
+        _thumbnails.Clear();
+    }
+
+    public void Dispose() => UnregisterAllThumbnails();
 
     private static int Lerp(int from, int to, double t) => from + (int)Math.Round((to - from) * t);
 
@@ -231,6 +358,10 @@ public partial class RailWindow : Window
             await _vm.ActivateCommand.ExecuteAsync(item);
         }
     }
+
+    private void RailMenu_Opened(object sender, RoutedEventArgs e) => _menuOpen = true;
+
+    private void RailMenu_Closed(object sender, RoutedEventArgs e) => _menuOpen = false;
 
     private async void NewTerminal_Click(object sender, MouseButtonEventArgs e)
     {
