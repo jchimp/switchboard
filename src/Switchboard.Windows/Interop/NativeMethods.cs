@@ -99,6 +99,15 @@ internal static partial class NativeMethods
     [DllImport("user32.dll")]
     public static extern uint GetWindowThreadProcessId(nint hwnd, out uint processId);
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetWindowRect(nint hwnd, out RECT rect);
+
+    public const uint MONITOR_DEFAULTTONEAREST = 2;
+
+    [DllImport("user32.dll")]
+    public static extern nint MonitorFromWindow(nint hwnd, uint flags);
+
     // ---- Window control ----------------------------------------------------------
 
     public const int SW_RESTORE = 9;
@@ -135,15 +144,20 @@ internal static partial class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool UnregisterHotKey(nint hwnd, int id);
 
-    // ---- App bar (milestone 2, kept here so the surface is complete) --------------------
+    // ---- App bar (ADR-0011) -------------------------------------------------------------
 
     public const uint ABM_NEW = 0;
     public const uint ABM_REMOVE = 1;
     public const uint ABM_QUERYPOS = 2;
     public const uint ABM_SETPOS = 3;
+    public const uint ABM_WINDOWPOSCHANGED = 9;
     public const uint ABE_LEFT = 0;
     public const uint ABE_TOP = 1;
     public const uint ABE_RIGHT = 2;
+
+    // Notification codes delivered as wParam of the registered callback message.
+    public const int ABN_POSCHANGED = 1;
+    public const int ABN_FULLSCREENAPP = 2;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct APPBARDATA
