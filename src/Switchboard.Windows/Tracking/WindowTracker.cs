@@ -44,6 +44,13 @@ public sealed class WindowTracker : IDisposable
     public IReadOnlyList<nint> UnboundTerminalWindows() =>
         WindowInfo.EnumerateTerminalWindows().Where(h => !_byHwnd.ContainsKey(h)).ToList();
 
+    /// <summary>
+    /// The same set, with titles attached for display. Called on rail-open only — CLAUDE.md
+    /// forbids polling EnumWindows on a timer, and this is exactly that scan.
+    /// </summary>
+    public IReadOnlyList<UnboundWindow> UnboundWindows() =>
+        UnboundTerminalWindows().Select(h => new UnboundWindow(h, WindowInfo.GetTitle(h))).ToList();
+
     public IReadOnlyCollection<TrackedWindow> Tracked => _byName.Values;
 
     public TrackedWindow? Find(string name) => _byName.GetValueOrDefault(name);
@@ -105,8 +112,28 @@ public sealed class WindowTracker : IDisposable
     }
 
     /// <summary>
-    /// Restart recovery: bind any visible terminal window whose title *starts with* a
-    /// known name. Best effort; unmatched windows stay unbound and show in the rail.
+    /// Restart recovery, pass 1: re-bind windows by the HWND they were bound to last run.
+    /// Handles survive a manager restart while titles drift; a stale handle (reboot, or the
+    /// window closed) fails <c>IsTerminalWindow</c> and is skipped (ADR-0002 amendment).
+    /// </summary>
+    public int RecoverByHwnd(IEnumerable<(string Name, nint Hwnd)> lastKnown)
+    {
+        var bound = 0;
+        foreach (var (name, hwnd) in lastKnown)
+        {
+            if (!_byName.ContainsKey(name) && !_byHwnd.ContainsKey(hwnd) && WindowInfo.IsTerminalWindow(hwnd))
+            {
+                Bind(name, hwnd);
+                bound++;
+            }
+        }
+
+        return bound;
+    }
+
+    /// <summary>
+    /// Restart recovery, pass 2: bind any visible terminal window whose title *starts with*
+    /// a known name. Best effort; unmatched windows stay unbound and show in the rail.
     /// </summary>
     public int RecoverByTitle(IEnumerable<string> names)
     {
