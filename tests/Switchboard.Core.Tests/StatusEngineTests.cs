@@ -43,6 +43,29 @@ public class StatusEngineTests
     }
 
     [Fact]
+    public void Observed_output_marks_working_and_decays_to_idle()
+    {
+        var (engine, time, _) = Make();
+        engine.WindowAppeared(Anvil);
+        engine.OutputObserved(Anvil);
+        Assert.Equal(TerminalState.Working, engine.StateOf("anvil"));
+
+        time.Advance(TimeSpan.FromSeconds(21));
+        engine.Tick();
+        Assert.Equal(TerminalState.Idle, engine.StateOf("anvil"));
+    }
+
+    [Fact]
+    public void Observed_output_never_downgrades_attention()
+    {
+        var (engine, _, _) = Make();
+        engine.WindowAppeared(Anvil);
+        engine.Flashed(Anvil);
+        engine.OutputObserved(Anvil);
+        Assert.Equal(TerminalState.Attention, engine.StateOf("anvil"));
+    }
+
+    [Fact]
     public void Attention_is_sticky_until_focused()
     {
         var (engine, time, _) = Make();
