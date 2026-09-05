@@ -103,6 +103,9 @@ public sealed class TerminalSession : IDisposable
     public TerminalDefinition? Definition(string name) =>
         Registry.Terminals.FirstOrDefault(t => t.Name == name);
 
+    /// <summary>The bound window's HWND, or 0 when the terminal isn't running. Rail thumbnails key on this.</summary>
+    public nint HwndOf(string name) => _tracker.Find(name)?.Hwnd ?? 0;
+
     public TerminalState StateOf(string name) => _status.StateOf(name);
 
     /// <summary>Focus if running, launch if not. The single entry point for "jump to X".</summary>
