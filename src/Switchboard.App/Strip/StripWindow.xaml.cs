@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
+using Switchboard.App.Rail;
 using Switchboard.App.Services;
 using Switchboard.App.ViewModels;
 using Switchboard.Core.Screen;
@@ -22,9 +23,11 @@ public partial class StripWindow : Window
     private readonly StripViewModel _vm;
     private readonly TaskbarVisibility _taskbarVisibility;
     private readonly AppBar _appBar;
+    private readonly RailWindow _rail;
     private readonly System.Windows.Threading.DispatcherTimer _redockDebounce;
     private readonly System.Windows.Threading.DispatcherTimer _collapseTimer;
     private readonly System.Windows.Threading.DispatcherTimer _slideTimer;
+    private readonly System.Windows.Threading.DispatcherTimer _hoverOpenTimer;
     private bool _collapsed;
     private bool _fullscreenHidden;
     private PixelRect? _currentRect;
@@ -32,15 +35,19 @@ public partial class StripWindow : Window
     private PixelRect _slideTo;
     private long _slideStartTicks;
 
-    public StripWindow(StripViewModel vm, TaskbarVisibility taskbarVisibility, AppBar appBar, TerminalSession session)
+    public StripWindow(
+        StripViewModel vm, TaskbarVisibility taskbarVisibility, AppBar appBar,
+        TerminalSession session, RailWindow rail)
     {
         _vm = vm;
         _taskbarVisibility = taskbarVisibility;
         _appBar = appBar;
+        _rail = rail;
 
         // Fullscreen detection outside app-bar mode rides the tracker's existing foreground
         // WinEvent (via the session) — no new hook, no polling (ADR-0011).
         session.ForegroundChanged += _ => CheckForegroundFullscreen();
+
         InitializeComponent();
         DataContext = vm;
         SourceInitialized += OnSourceInitialized;
@@ -68,14 +75,43 @@ public partial class StripWindow : Window
         _collapseTimer.Tick += (_, _) =>
         {
             _collapseTimer.Stop();
-            if (AutoHideActive && !IsMouseOver && !_vm.AnyAttention)
+            if (AutoHideActive && !IsMouseOver && !_vm.AnyAttention && !_rail.IsOpen)
             {
                 SetCollapsed(true);
             }
         };
 
+        _hoverOpenTimer = new System.Windows.Threading.DispatcherTimer();
+        _hoverOpenTimer.Tick += (_, _) =>
+        {
+            _hoverOpenTimer.Stop();
+            if (IsMouseOver && _vm.Settings.OpenRailOnHover)
+            {
+                _rail.OpenRail(); // R15: hovering opens the rail
+            }
+        };
+
         _slideTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
         _slideTimer.Tick += (_, _) => SlideStep();
+
+        // The strip counts as "inside" for the rail's close probe: hovering the strip with
+        // the rail open must not close it (and the open slide passes under the cursor).
+        rail.AnchorHovered = () => IsMouseOver;
+
+        // The rail anchors to the full-thickness strip; collapsing under it would leave a
+        // gap, so auto-hide waits for the rail to close (ADR-0012).
+        rail.OpenChanged += open =>
+        {
+            if (open)
+            {
+                _collapseTimer.Stop();
+                SetCollapsed(false);
+            }
+            else if (AutoHideActive && !IsMouseOver && !_vm.AnyAttention)
+            {
+                RestartCollapseTimer();
+            }
+        };
     }
 
     /// <summary>Raised when Explorer restarts; taskbar buttons and DWM colors need re-applying (ADR-0009).</summary>
@@ -169,11 +205,17 @@ public partial class StripWindow : Window
         base.OnMouseEnter(e);
         _collapseTimer.Stop();
         SetCollapsed(false);
+        if (_vm.Settings.OpenRailOnHover && !_rail.IsOpen)
+        {
+            _hoverOpenTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(1, _vm.Settings.HoverOpenDelayMs));
+            _hoverOpenTimer.Start();
+        }
     }
 
     protected override void OnMouseLeave(MouseEventArgs e)
     {
         base.OnMouseLeave(e);
+        _hoverOpenTimer.Stop();
         if (AutoHideActive)
         {
             RestartCollapseTimer();
