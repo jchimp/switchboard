@@ -45,6 +45,7 @@ public partial class App : Application
         services.AddSingleton<FrameColorizer>();
         services.AddSingleton<TaskbarVisibility>();
         services.AddSingleton<AppBar>();
+        services.AddSingleton<WindowSampler>();
         services.AddSingleton<WindowTracker>();
         services.AddSingleton<GlobalHotkeyManager>();
         services.AddSingleton<TerminalSession>();
@@ -77,6 +78,10 @@ public partial class App : Application
 
             var strip = _services.GetRequiredService<StripWindow>();
             strip.Show();
+
+            // PrintWindow sampling would stutter the rail's 16 ms slide frames (ADR-0013).
+            var rail = _services.GetRequiredService<Rail.RailWindow>();
+            session.MotionSamplingPaused = () => rail.IsSliding;
 
             var bindings = _services.GetRequiredService<HotkeyBindings>();
             bindings.Attach(strip);
