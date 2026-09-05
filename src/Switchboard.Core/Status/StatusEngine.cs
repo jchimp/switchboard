@@ -85,6 +85,23 @@ public sealed class StatusEngine
         }
     }
 
+    /// <summary>
+    /// Moves a terminal's entry to its new name after a live rename (ADR-0014). State and
+    /// activity clock travel with it — Attention must survive a rename (invariant 6).
+    /// </summary>
+    public void Renamed(string oldName, TerminalDefinition renamed)
+    {
+        if (!_entries.Remove(oldName, out var e))
+        {
+            return;
+        }
+
+        e.Definition = renamed;
+        _entries[renamed.Name] = e;
+        StateChanged?.Invoke(oldName, TerminalState.Closed);
+        StateChanged?.Invoke(renamed.Name, e.State);
+    }
+
     /// <summary>Call on a timer (~1 s). Decays Working to Idle after <see cref="IdleAfter"/>.</summary>
     public void Tick()
     {
