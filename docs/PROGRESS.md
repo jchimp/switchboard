@@ -13,11 +13,11 @@ M1 code-complete plus two pulled-forward M2 items (taskbar hiding, strip auto-hi
 - [x] Single-instance guard
 - [x] registry.json hot-reload with self-write mute (ADR-0008)
 - [x] File logging to `%LOCALAPPDATA%\Switchboard\logs` + crash handlers
-- [ ] Manual verify: docking on configured monitor/edge, scale change, live JSON edits, quit menu
-- [ ] Manual verify `hideFromTaskbar`: buttons vanish on bind, return on quit/toggle-off, survive Explorer restart
-- [ ] Manual verify strip auto-hide: collapse to sliver, hover slide-out, Attention pulse + slide-out until focused
+- [x] Manual verify: docking on configured monitor/edge, scale change, live JSON edits, quit menu
+- [x] Manual verify `hideFromTaskbar`: buttons vanish on bind, return on quit/toggle-off, survive Explorer restart
+- [x] Manual verify strip auto-hide: collapse to sliver, hover slide-out, Attention pulse + slide-out until focused
 - [ ] M1 exit: run daily for a week; tune status rules against real WT titles
-- [ ] Verify Attention fires within 2 s for an AI harness waiting on input (PRD success criterion)
+- [x] Verify Attention fires within 2 s for an AI harness waiting on input (PRD success criterion)
 
 ## Progress Log
 
@@ -30,3 +30,6 @@ M1 code-complete plus two pulled-forward M2 items (taskbar hiding, strip auto-hi
 - Next: manual verification on real monitors, then daily use.
 - Taskbar sprawl: `hideFromTaskbar` (global, default off) removes bound windows' buttons via `ITaskbarList::DeleteTab`, restores on unbind/quit, re-applies on `TaskbarCreated` (which also redoes DWM colors). First COM interop; new `TaskbarVisibility` wrapper. ADR-0009.
 - Strip auto-hide (`autoHide`/`hiddenThickness`/`collapseDelayMs`, default off): collapses to a colored sliver, slides out on hover; Attention slides it out and holds until focused. Pulse reworked from opacity to a white-overlay color pulse (reads at 2 px, frees `Opacity` for its binding). ADR-0010; PRD R23–R25. 54/54 tests.
+- Attention review: title match is the only live path (`StatusEngine.Flashed` is dead code — no BEL/flash detection wired); default trigger words are broad, expect false positives.
+- Fixed: attention raised on the already-focused window now clears immediately instead of pulsing until refocus. Added sticky test for the title-driven path; 55/55 tests.
+- New `tools/Test-Attention.ps1`: manual end-to-end pulse test (retitles the terminal with a trigger word after a delay).
