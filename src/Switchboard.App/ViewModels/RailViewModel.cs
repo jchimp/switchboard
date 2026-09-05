@@ -43,6 +43,17 @@ public sealed partial class RailViewModel : ObservableObject
     [RelayCommand]
     private Task NewTerminal() => _quick.CreateAndLaunchAsync();
 
+    // The rail covers the strip while open (ADR-0012 as amended), so it carries the same
+    // context-menu actions the strip has — otherwise they'd be unreachable under it.
+    [RelayCommand]
+    private void ReapplyColors() => _session.ReapplyColors();
+
+    [RelayCommand]
+    private Task ReloadRegistry() => _session.ReloadRegistryAsync();
+
+    [RelayCommand]
+    private void Quit() => System.Windows.Application.Current.Shutdown();
+
     /// <summary>Incremental resync against the registry: upsert in order, drop the missing.</summary>
     public void Sync()
     {
