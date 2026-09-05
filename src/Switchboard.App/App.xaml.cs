@@ -52,6 +52,8 @@ public partial class App : Application
         services.AddSingleton<HotkeyBindings>();
         services.AddSingleton<StripViewModel>();
         services.AddSingleton<StripWindow>();
+        services.AddSingleton<RailViewModel>();
+        services.AddSingleton<Rail.RailWindow>();
         _services = services.BuildServiceProvider();
 
         var log = _services.GetRequiredService<ILogger<App>>();
