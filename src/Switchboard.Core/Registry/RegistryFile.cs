@@ -23,6 +23,9 @@ public sealed record RegistryFile
     /// <summary>Remove bound windows' taskbar buttons while bound; restored on unbind and on exit (ADR-0009).</summary>
     public bool HideFromTaskbar { get; init; }
 
+    /// <summary>Detect output in unfocused terminals by sampling window pixels (ADR-0013).</summary>
+    public bool ThumbnailMotionEnabled { get; init; } = true;
+
     public static RegistryFile Empty => new();
 }
 
