@@ -19,7 +19,8 @@ public static class RailPlacement
         MonitorBounds monitor, ScreenEdge edge, int stripThicknessDips, int railSizeDips)
     {
         var wa = monitor.WorkArea;
-        var strip = Math.Max(1, (int)Math.Round(stripThicknessDips * monitor.DpiScale));
+        // A zero offset is meaningful: the rail anchors at the screen edge, covering the strip.
+        var strip = Math.Max(0, (int)Math.Round(stripThicknessDips * monitor.DpiScale));
         var rail = Math.Max(1, (int)Math.Round(railSizeDips * monitor.DpiScale));
         return edge switch
         {
