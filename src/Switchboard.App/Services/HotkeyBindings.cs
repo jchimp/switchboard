@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Interop;
 using Microsoft.Extensions.Logging;
+using Switchboard.App.Rail;
 using Switchboard.Core.Hotkeys;
 using Switchboard.Core.Registry;
 using Switchboard.Windows.Hotkeys;
@@ -13,14 +14,18 @@ public sealed class HotkeyBindings
     private readonly GlobalHotkeyManager _hotkeys;
     private readonly TerminalSession _session;
     private readonly QuickLaunchService _quick;
+    private readonly RailWindow _rail;
     private readonly ILogger<HotkeyBindings> _log;
     private HotkeySettings? _bound;
 
-    public HotkeyBindings(GlobalHotkeyManager hotkeys, TerminalSession session, QuickLaunchService quick, ILogger<HotkeyBindings> log)
+    public HotkeyBindings(
+        GlobalHotkeyManager hotkeys, TerminalSession session, QuickLaunchService quick,
+        RailWindow rail, ILogger<HotkeyBindings> log)
     {
         _hotkeys = hotkeys;
         _session = session;
         _quick = quick;
+        _rail = rail;
         _log = log;
     }
 
@@ -51,7 +56,8 @@ public sealed class HotkeyBindings
         Bind(h.CycleRecent, () => Fire(_session.CycleRecentAsync()));
         Bind(h.JumpToAttention, () => Fire(_session.ActivateAttentionAsync()));
         Bind(h.ReapplyColors, _session.ReapplyColors);
-        // OpenSwitcher / ToggleRail land in milestone 2 with their windows.
+        Bind(h.ToggleRail, _rail.Toggle);
+        // OpenSwitcher lands in milestone 3 with the overlay switcher.
 
         for (var d = 1; d <= 9; d++)
         {
