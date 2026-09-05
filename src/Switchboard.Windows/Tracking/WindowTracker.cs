@@ -103,6 +103,23 @@ public sealed class WindowTracker : IDisposable
         WindowAppeared?.Invoke(tw);
     }
 
+    /// <summary>
+    /// Moves a live binding to a new name after a rename (ADR-0014). The HWND stays bound,
+    /// so tracking never blinks; no events fire — the session coordinates the fallout.
+    /// </summary>
+    public void Rekey(string oldName, string newName)
+    {
+        if (!_byName.Remove(oldName, out var tw))
+        {
+            return;
+        }
+
+        var renamed = tw with { Name = newName };
+        _byName[newName] = renamed;
+        _byHwnd[tw.Hwnd] = renamed;
+        _log.LogInformation("Rekeyed {Old} → {New} ({Hwnd:X})", oldName, newName, tw.Hwnd);
+    }
+
     public void Unbind(string name)
     {
         if (_byName.Remove(name, out var tw))
