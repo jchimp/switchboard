@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terminal mux — layout concepts</title>
+<style>
+  :root{
+    --page-bg:#eef0f4; --page-fg:#1b1f27; --page-muted:#5b6474; --page-line:#d5d9e1; --page-card:#ffffff;
+    --desk:#1b2438; --desk2:#0f1524;
+    --chrome:#1f1f1f; --chrome2:#2a2a2a; --term:#151515; --term-fg:#d8d8d8; --term-dim:#8a8a8a;
+    --taskbar:rgba(20,24,34,.85);
+    --mono:"Cascadia Mono","JetBrains Mono","Consolas",ui-monospace,monospace;
+    --sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --page-bg:#14171d; --page-fg:#e6e8ec; --page-muted:#9aa3b2; --page-line:#2a3040; --page-card:#1c2028;
+    }
+  }
+  :root[data-theme="dark"]{
+    --page-bg:#14171d; --page-fg:#e6e8ec; --page-muted:#9aa3b2; --page-line:#2a3040; --page-card:#1c2028;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page-bg);color:var(--page-fg);font-family:var(--sans);line-height:1.45}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:22px;font-weight:600;margin:0 0 4px}
+  .lede{color:var(--page-muted);margin:0 0 18px;max-width:70ch}
+
+  .concepts{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .concepts button{font:inherit;font-size:14px;padding:8px 14px;border:1px solid var(--page-line);background:var(--page-card);color:var(--page-fg);border-radius:6px;cursor:pointer}
+  .concepts button[aria-pressed="true"]{border-color:var(--page-fg);box-shadow:inset 0 0 0 1px var(--page-fg)}
+  .concepts button:focus-visible{outline:2px solid #4f8ef7;outline-offset:2px}
+
+  /* ---------- desktop simulation ---------- */
+  .desktop{position:relative;aspect-ratio:16/9;background:
+      radial-gradient(1200px 600px at 70% 20%, #2a3a5e 0%, transparent 60%),
+      radial-gradient(900px 500px at 20% 90%, #1d3350 0%, transparent 60%),
+      linear-gradient(160deg,var(--desk),var(--desk2));
+    border-radius:8px;overflow:hidden;border:1px solid var(--page-line);user-select:none}
+  .desktop:focus-visible{outline:2px solid #4f8ef7}
+
+  /* taskbar */
+  .taskbar{position:absolute;left:0;right:0;bottom:0;height:34px;background:var(--taskbar);backdrop-filter:blur(8px);display:flex;justify-content:center;align-items:center;gap:10px}
+  .tb{width:22px;height:22px;border-radius:4px;background:#3a4256;position:relative}
+  .tb.win{background:linear-gradient(135deg,#3b82f6 50%,#60a5fa 50%)}
+  .tb.wt{background:#2b2b2b;border:1px solid #555}
+  .tb.wt::after{content:">_";position:absolute;inset:0;font:700 9px var(--mono);color:#bbb;display:flex;align-items:center;justify-content:center}
+  .tb.active::before{content:"";position:absolute;left:5px;right:5px;bottom:-5px;height:2px;background:#8ab4ff;border-radius:2px}
+  .tb.mux{background:conic-gradient(#b07cf5,#4f8ef7,#22b8cf,#62c554,#f28c28,#e05c9b,#b07cf5)}
+  .tb.mux::after{content:"";position:absolute;inset:4px;border-radius:2px;background:#151515}
+
+  /* the one visible Windows Terminal window */
+  .wt{position:absolute;left:22%;top:9%;width:66%;height:78%;background:var(--term);border-radius:8px;overflow:hidden;
+      box-shadow:0 0 0 1.5px var(--accent),0 24px 60px rgba(0,0,0,.55);transition:box-shadow .25s,left .3s,width .3s}
+  .wt.rail-open{left:24%;width:64%}
+  .tabrow{height:32px;background:var(--chrome);display:flex;align-items:flex-end;padding:0 6px;gap:2px;position:relative}
+  .tabrow .tab{height:26px;padding:0 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#bbb;border-radius:6px 6px 0 0;background:var(--chrome2);white-space:nowrap}
+  .tabrow .tab.on{background:var(--term);color:#fff;box-shadow:inset 0 3px 0 var(--accent)}
+  .tabrow .tab .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+  .tabrow .tab.off .dot{background:#555}
+  .tabrow .wtitle{position:absolute;left:50%;top:0;height:32px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;font-size:12px;color:#ddd;pointer-events:none}
+  .tabrow .wtitle .chip{font:600 10px var(--sans);letter-spacing:.02em;padding:2px 8px;border-radius:999px;background:var(--accent);color:#0b0b0b}
+  .tabrow .wctl{position:absolute;right:0;top:0;height:32px;display:flex;align-items:center;color:#aaa;font-size:11px;gap:18px;padding-right:14px}
+  .pane{padding:12px 14px;font:12.5px/1.55 var(--mono);color:var(--term-fg);white-space:pre;overflow:hidden;height:calc(100% - 32px)}
+  .pane .p{color:var(--accent)}
+  .pane .d{color:var(--term-dim)}
+  .pane .ok{color:#62c554}.pane .wn{color:#f2c94c}.pane .er{color:#ef6b6b}
+  .cursor{display:inline-block;width:7px;height:14px;background:var(--term-fg);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){.cursor{animation:none}.wt,.rail,.strip,.overlay{transition:none !important}}
+
+  /* ---------- Concept A: edge strip that slides out ---------- */
+  .strip{position:absolute;left:0;top:0;bottom:34px;width:8px;display:flex;flex-direction:column;z-index:5;cursor:pointer}
+  .strip span{flex:1;opacity:.9;border-bottom:1px solid rgba(0,0,0,.35)}
+  .strip span.on{width:14px;box-shadow:0 0 12px currentColor}
+  .rail{position:absolute;left:0;top:0;bottom:34px;width:236px;background:rgba(18,20,26,.94);backdrop-filter:blur(10px);z-index:6;
+        transform:translateX(-100%);transition:transform .22s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;border-right:1px solid #2c3140}
+  .rail.open{transform:none}
+  .rail .head{padding:10px 12px 6px;color:#9aa3b2;font-size:11px;display:flex;justify-content:space-between}
+  .rail .head b{color:#e6e8ec;font-weight:600}
+  .rail .list{flex:1;overflow:auto;padding:0 8px 8px;display:flex;flex-direction:column;gap:6px}
+  .card{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px;border-radius:6px;border:1px solid transparent;cursor:pointer;background:transparent}
+  .card:hover{background:rgba(255,255,255,.05)}
+  .card.on{border-color:var(--c);background:rgba(255,255,255,.04)}
+  .card .thumb{width:76px;height:46px;border-radius:3px;background:#101010;border-left:3px solid var(--c);overflow:hidden;padding:4px 5px;display:flex;flex-direction:column;gap:3px}
+  .card .thumb i{display:block;height:3px;border-radius:2px;background:#3a3a3a}
+  .card .thumb i:first-child{background:var(--c);width:60%}
+  .card .thumb i:nth-child(3){width:80%}.card .thumb i:nth-child(4){width:45%}
+  .card .meta{min-width:0}
+  .card .name{font-size:12.5px;color:#f1f3f6;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .name::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+  .card .sub{font:11px var(--mono);color:#8b93a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .key{font:11px var(--mono);color:#8b93a3;border:1px solid #384056;border-radius:4px;padding:1px 5px}
+  .card.busy .sub::after{content:" ●";color:var(--c)}
+  .rail .foot{padding:8px 12px;border-top:1px solid #2c3140;display:flex;gap:8px;font-size:11px;color:#9aa3b2}
+  .rail .foot .btn{border:1px solid #384056;border-radius:4px;padding:3px 8px;color:#dfe3ea}
+
+  /* top-edge variant */
+  .desktop.top .strip{left:0;right:0;top:0;bottom:auto;width:auto;height:8px;flex-direction:row}
+  .desktop.top .strip span{border-bottom:0;border-right:1px solid rgba(0,0,0,.35)}
+  .desktop.top .strip span.on{width:auto;height:14px}
+  .desktop.top .rail{left:0;right:0;top:0;bottom:auto;width:auto;height:150px;transform:translateY(-100%);border-right:0;border-bottom:1px solid #2c3140}
+  .desktop.top .rail.open{transform:none}
+  .desktop.top .rail .head{display:none}
+  .desktop.top .rail .list{flex-direction:row;padding:12px 10px 8px;overflow-x:auto}
+  .desktop.top .card{grid-template-columns:1fr;grid-template-rows:auto auto;gap:5px;width:150px;flex:none;align-content:start}
+  .desktop.top .card .thumb{width:100%;height:64px}
+  .desktop.top .card .key{position:absolute;right:8px;top:8px}
+  .desktop.top .card{position:relative}
+  .desktop.top .rail .foot{border-top:0;border-left:1px solid #2c3140;flex-direction:column;justify-content:center;padding:0 14px}
+  .desktop.top .rail{flex-direction:row}
+  .edge{display:inline-flex;border:1px solid var(--page-line);border-radius:6px;overflow:hidden;margin-left:auto}
+  .edge button{border:0 !important;border-radius:0 !important;box-shadow:none !important}
+  .edge button[aria-pressed="true"]{background:var(--page-fg);color:var(--page-bg)}
+
+  /* new-terminal popup */
+  .newt{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);width:380px;background:rgba(20,22,29,.98);border:1px solid #2f3646;border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.6);padding:14px 16px;z-index:9;display:none;font-size:12.5px;color:#e6e8ec}
+  .newt.open{display:block}
+  .newt h4{margin:0 0 10px;font-size:13px;font-weight:600;display:flex;justify-content:space-between}
+  .newt h4 span{color:#8b93a3;font:11px var(--mono)}
+  .newt .profiles{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .newt .pr{padding:5px 10px;border-radius:5px;border:1px solid #384056;color:#cfd4dd;cursor:pointer;display:flex;gap:6px;align-items:center}
+  .newt .pr.on{border-color:#fff;background:#262a33;color:#fff}
+  .newt .pr i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+  .newt .fld{display:grid;grid-template-columns:70px 1fr;gap:8px;align-items:center;margin-bottom:8px;color:#8b93a3}
+  .newt .fld .v{font:12px var(--mono);color:#eef1f5;border:1px solid #384056;border-radius:5px;padding:5px 8px;background:#14161c}
+  .newt .fld .v.auto::after{content:"auto";float:right;color:#5c6577;font-size:10px}
+  .newt .hint{display:flex;gap:14px;margin-top:10px;color:#8b93a3;font-size:11px}
+  .newt kbd{font:11px var(--mono);border:1px solid #384056;border-radius:4px;padding:0 5px;color:#dfe3ea}
+
+  /* ---------- Concept B: overlay switcher ---------- */
+  .overlay{position:absolute;inset:0;bottom:34px;background:rgba(6,8,14,.55);backdrop-filter:blur(3px);z-index:8;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s}
+  .overlay.open{opacity:1;pointer-events:auto}
+  .switcher{width:min(640px,80%);background:rgba(20,22,29,.97);border:1px solid #2f3646;border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.6);padding:10px}
+  .switcher .search{display:flex;align-items:center;gap:8px;padding:6px 8px 10px;font:13px var(--mono);color:#e6e8ec}
+  .switcher .search .q{flex:1;color:#8b93a3}
+  .switcher .search .q b{color:#e6e8ec;font-weight:500}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .tile{border-radius:6px;background:#0f0f0f;border:1px solid #2a2f3c;overflow:hidden;cursor:pointer;position:relative}
+  .tile:hover{border-color:#4a5268}
+  .tile.on{border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 0 18px color-mix(in srgb,var(--c) 35%,transparent)}
+  .tile .bar{height:5px;background:var(--c)}
+  .tile .scr{height:64px;padding:6px 8px;display:flex;flex-direction:column;gap:4px}
+  .tile .scr i{display:block;height:3px;border-radius:2px;background:#333}
+  .tile .scr i:nth-child(1){background:var(--c);width:50%}.tile .scr i:nth-child(2){width:90%}.tile .scr i:nth-child(3){width:70%}.tile .scr i:nth-child(4){width:35%}
+  .tile .lab{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;font-size:12px;color:#eef1f5;background:#171a21}
+  .tile .lab .key{font:11px var(--mono);color:#8b93a3}
+  .switcher .hint{display:flex;gap:16px;padding:10px 8px 2px;font-size:11px;color:#8b93a3}
+  .switcher kbd{font:11px var(--mono);border:1px solid #384056;border-radius:4px;padding:0 5px;color:#dfe3ea}
+
+  /* ---------- Concept C: persistent thin rail ---------- */
+  .thin{position:absolute;left:0;top:0;bottom:34px;width:54px;background:rgba(18,20,26,.94);border-right:1px solid #2c3140;z-index:6;display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:8px}
+  .thin .sq{width:36px;height:36px;border-radius:8px;background:#141414;border:1.5px solid #2c3140;display:flex;align-items:center;justify-content:center;font:600 12px var(--mono);color:#cfd4dd;cursor:pointer;position:relative}
+  .thin .sq::before{content:"";position:absolute;left:-1.5px;top:8px;bottom:8px;width:3px;border-radius:2px;background:var(--c)}
+  .thin .sq.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 18%,#141414);color:#fff}
+  .thin .sq:hover .tip{opacity:1}
+  .thin .tip{position:absolute;left:44px;top:50%;transform:translateY(-50%);background:#0d0f14;border:1px solid var(--c);color:#eef1f5;font:12px var(--sans);padding:4px 8px;border-radius:5px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .1s}
+  .thin .tip small{display:block;font:10.5px var(--mono);color:#8b93a3}
+  .thin .plus{margin-top:auto;color:#8b93a3;font-size:18px}
+
+  /* ---------- notes ---------- */
+  .notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:22px}
+  .note h2{font-size:14px;font-weight:600;margin:0 0 6px}
+  .note p{margin:0 0 6px;color:var(--page-muted);font-size:13.5px;max-width:52ch}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:14px;font-size:13px;color:var(--page-muted)}
+  .legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);margin-right:6px;vertical-align:-1px}
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Terminal mux — layout concepts</h1>
+  <p class="lede">Three ways to jump between 5+ Windows Terminal windows without crowding the taskbar. Every concept shares the same color system: the terminal's color lives in the window frame, the tab, a title chip, and the switcher — so you always know which window you're looking at.</p>
+
+  <div class="concepts" role="group" aria-label="Layout concept">
+    <button data-concept="A" aria-pressed="true">A · Edge strip, slides out</button>
+    <button data-concept="B" aria-pressed="false">B · Hotkey overlay switcher</button>
+    <button data-concept="C" aria-pressed="false">C · Persistent thin rail</button>
+    <span class="edge" id="edge" role="group" aria-label="Strip edge"><button data-edge="left" aria-pressed="true">Left edge</button><button data-edge="top" aria-pressed="false">Top edge</button></span>
+  </div>
+
+  <div class="desktop" id="desktop" tabindex="0" aria-label="Desktop simulation. Press 1 to 9 to switch terminals, backtick for the overlay, N for a new terminal.">
+    <!-- Concept A -->
+    <div class="strip" id="strip" title="Hover or click to open"></div>
+    <div class="rail" id="rail">
+      <div class="head"><b>Terminals</b><span id="count">6 windows</span></div>
+      <div class="list" id="railList"></div>
+      <div class="foot"><span class="btn">+ New  <span style="opacity:.6">Ctrl+Alt+N</span></span></div>
+    </div>
+
+    <!-- Concept C -->
+    <div class="thin hidden" id="thin"></div>
+
+    <!-- The active Windows Terminal window -->
+    <div class="wt" id="wt">
+      <div class="tabrow">
+        <div class="tab on" id="tab0"><span class="dot"></span><span id="tabName">anvil</span></div>
+        <div class="tab off" id="tab1"><span class="dot"></span><span id="tabName2">logs</span></div>
+        <div class="wtitle"><span class="chip" id="chip">anvil</span><span id="wtitleText">claude — ~/anvil</span></div>
+        <div class="wctl"><span>—</span><span>▢</span><span>✕</span></div>
+      </div>
+      <div class="pane" id="pane"></div>
+    </div>
+
+    <!-- New terminal (Ctrl+Alt+N) -->
+    <div class="newt" id="newt">
+      <h4>New terminal <span>Ctrl+Alt+N</span></h4>
+      <div class="profiles" id="profiles"></div>
+      <div class="fld"><span>Name</span><span class="v auto" id="nName">term-7</span></div>
+      <div class="fld"><span>Color</span><span class="v auto" id="nColor" style="display:flex;gap:8px;align-items:center"><i id="nSw" style="width:12px;height:12px;border-radius:3px;display:inline-block"></i><span id="nHex"></span></span></div>
+      <div class="fld"><span>Directory</span><span class="v" id="nCwd">~</span></div>
+      <div class="fld"><span>Keep</span><span style="color:#cfd4dd">☑ add to registry (uncheck for a throwaway)</span></div>
+      <div class="hint"><span><kbd>Enter</kbd> open</span><span><kbd>Tab</kbd> next profile</span><span><kbd>Esc</kbd> cancel</span><span style="margin-left:auto">last dir remembered</span></div>
+    </div>
+
+    <!-- Concept B -->
+    <div class="overlay" id="overlay">
+      <div class="switcher">
+        <div class="search"><span>›</span><span class="q">jump to… <b id="qtext"></b></span><span style="color:#8b93a3">Ctrl+`</span></div>
+        <div class="grid" id="grid"></div>
+        <div class="hint"><span><kbd>1</kbd>–<kbd>9</kbd> jump</span><span><kbd>↑↓</kbd> move</span><span><kbd>Enter</kbd> focus</span><span><kbd>N</kbd> new</span><span><kbd>Esc</kbd> close</span></div>
+      </div>
+    </div>
+
+    <div class="taskbar">
+      <div class="tb win"></div>
+      <div class="tb"></div>
+      <div class="tb"></div>
+      <div class="tb wt active" title="One Windows Terminal entry, not six"></div>
+      <div class="tb mux" title="Your manager"></div>
+      <div class="tb"></div>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="notes">
+    <div class="note">
+      <h2>New terminal, from anywhere</h2>
+      <p>Ctrl+Alt+N pops a small palette: pick a profile, Enter. Name and color are auto-assigned (next unused hue), directory defaults to the last one you used, and it's registered so the strip shows it immediately. Untick "keep" for a throwaway that disappears from the registry when it closes.</p>
+      <p>Press N in the desktop below to try it.</p>
+    </div>
+    <div class="note">
+      <h2>A · Edge strip</h2>
+      <p>An 8px strip hugs the left screen edge, one colored segment per terminal — the active one glows. Hover (or Ctrl+`) slides out a rail of live DWM thumbnails with name, shell, working dir, and a number key. Zero taskbar footprint; the strip doubles as a passive status bar.</p>
+      <p>Top-edge variant: the strip runs along the top and the rail drops down as a horizontal row of wider thumbnails — better on an ultrawide, and it never collides with a left-docked app or the Win11 snap zones. Same registry, same colors; the edge is a setting.</p>
+    </div>
+    <div class="note">
+      <h2>B · Overlay switcher</h2>
+      <p>Nothing on screen until you press the hotkey; then a centered palette with thumbnails, fuzzy search, and 1–6 jump keys. Fastest for muscle memory, and it's the one that works the same on a laptop screen. Pairs naturally with A or C rather than replacing them.</p>
+      <p>Cost: no passive glance — you can't see that a build finished without opening it.</p>
+    </div>
+    <div class="note">
+      <h2>C · Thin rail</h2>
+      <p>A 54px dock that's always visible: color bar + two-letter tag per terminal, tooltip on hover. Terminal window nudges right to fit. Feels like a VS Code activity bar, so it's familiar, and it's the easiest to build first.</p>
+      <p>Cost: permanent screen real estate, and on one monitor it competes with whatever you'd dock on the left.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const T = [
+    {id:'anvil',   tag:'AN', c:'#b07cf5', shell:'wsl · ubuntu', cwd:'~/anvil',            title:'claude — ~/anvil',            busy:true,
+     body:`<span class="p">❯</span> claude --resume
+<span class="d">Anvil harness · session 14 · ctx 41%</span>
+
+<span class="p">●</span> Reading memory/harness.md…
+<span class="p">●</span> Patched tools/router.py (+18 −4)
+<span class="ok">✓</span> pytest  38 passed in 2.1s
+
+<span class="d">?</span> Next: wire the fallback provider?  <span class="cursor"></span>`},
+    {id:'bistrack', tag:'BT', c:'#4f8ef7', shell:'pwsh 7',       cwd:'C:\\ops\\bistrack',   title:'pwsh — bistrack sync',       busy:false,
+     body:`<span class="p">PS</span> C:\\ops\\bistrack&gt; .\\Sync-Branches.ps1 -WhatIf
+<span class="d">Connecting to BTSQL01…</span>
+<span class="ok">OK</span>  Polson    342 items
+<span class="ok">OK</span>  Ronan     118 items
+<span class="wn">!!</span>  Bigfork   3 price mismatches
+<span class="d">WhatIf: no changes written.</span>
+
+<span class="p">PS</span> C:\\ops\\bistrack&gt; <span class="cursor"></span>`},
+    {id:'loadout-api', tag:'LA', c:'#c9d43a', shell:'python · uv', cwd:'~/loadout/api',    title:'uv run — loadout api',       busy:true,
+     body:`<span class="p">❯</span> uv run fastapi dev app/main.py
+<span class="d">INFO</span>  Uvicorn running on http://127.0.0.1:8000
+<span class="d">INFO</span>  Watching for file changes
+<span class="ok">200</span> POST /proposals/build  412ms
+<span class="ok">200</span> GET  /trucks            9ms
+<span class="er">422</span> POST /proposals/build  <span class="d">weight_lbs missing</span>
+<span class="d">INFO</span>  Reloading… app/schemas.py changed <span class="cursor"></span>`},
+    {id:'loadout-web', tag:'LW', c:'#62c554', shell:'node · vite', cwd:'~/loadout/web',    title:'vite — loadout web',         busy:true,
+     body:`<span class="p">❯</span> npm run dev
+  <span class="ok">VITE</span> v6.3  ready in 412 ms
+  ➜  Local:   http://localhost:5173/
+<span class="d">12:04:11</span> [vite] hmr update /src/Board.tsx
+<span class="d">12:04:38</span> [vite] hmr update /src/lib/api.ts
+<span class="wn">TS2345</span> Argument of type 'string' is not assignable…
+<span class="cursor"></span>`},
+    {id:'docker',  tag:'DK', c:'#22b8cf', shell:'wsl · docker',  cwd:'~/loadout',          title:'docker compose — logs',      busy:false,
+     body:`<span class="p">❯</span> docker compose logs -f --tail 20
+<span class="d">postgres-1  |</span> database system is ready to accept connections
+<span class="d">redis-1     |</span> Ready to accept connections tcp
+<span class="d">api-1       |</span> Application startup complete.
+<span class="d">worker-1    |</span> picked up job 8814 (load_proposal)
+<span class="d">worker-1    |</span> job 8814 done in 3.9s
+<span class="cursor"></span>`},
+    {id:'scratch', tag:'SC', c:'#f28c28', shell:'wsl · ubuntu',  cwd:'~',                  title:'bash — scratch',             busy:false,
+     body:`<span class="p">❯</span> htop
+<span class="d">CPU</span> [||||||        18%]   <span class="d">Mem</span> [|||||||||||  11.2G/32G]
+<span class="d">Tasks: 214, 1 running</span>
+
+<span class="p">❯</span> ssh homelab
+<span class="d">Last login: Fri Sep  4 07:12 from 10.0.0.4</span>
+<span class="cursor"></span>`},
+  ];
+
+  let active = 0, concept = 'A', railOpen = false, overlayOpen = false, newOpen = false, prof = 0, nextN = 7;
+  const PROFILES=[{n:'PowerShell 7',c:'#4f8ef7',cwd:'C:\\ops'},{n:'Ubuntu (WSL)',c:'#f28c28',cwd:'~'},{n:'Docker',c:'#22b8cf',cwd:'~/loadout'},{n:'Python · uv',c:'#c9d43a',cwd:'~/loadout/api'},{n:'Claude Code',c:'#b07cf5',cwd:'~/anvil'}];
+  const HUES=['#b07cf5','#4f8ef7','#c9d43a','#62c554','#22b8cf','#f28c28','#e05c9b','#ef6b6b','#f2c94c'];
+  const $ = id => document.getElementById(id);
+
+  function renderWindow(){
+    const t = T[active];
+    $('wt').style.setProperty('--accent', t.c);
+    $('chip').textContent = t.id;
+    $('tabName').textContent = t.id;
+    $('wtitleText').textContent = t.title;
+    $('pane').innerHTML = t.body;
+    $('tabName2').textContent = t.id === 'docker' ? 'compose' : 'logs';
+  }
+
+  function renderStrip(){
+    $('strip').innerHTML = T.map((t,i)=>`<span style="background:${t.c};color:${t.c}" class="${i===active?'on':''}"></span>`).join('');
+  }
+  function renderRail(){
+    $('railList').innerHTML = T.map((t,i)=>`
+      <div class="card ${i===active?'on':''} ${t.busy?'busy':''}" style="--c:${t.c}" data-i="${i}">
+        <div class="thumb"><i></i><i></i><i></i><i></i></div>
+        <div class="meta"><div class="name">${t.id}</div><div class="sub">${t.shell} · ${t.cwd}</div></div>
+        <span class="key">${i+1}</span>
+      </div>`).join('');
+  }
+  function renderGrid(){
+    $('grid').innerHTML = T.map((t,i)=>`
+      <div class="tile ${i===active?'on':''}" style="--c:${t.c}" data-i="${i}">
+        <div class="bar"></div>
+        <div class="scr"><i></i><i></i><i></i><i></i></div>
+        <div class="lab"><span>${t.id}</span><span class="key">${i+1}</span></div>
+      </div>`).join('');
+  }
+  function renderThin(){
+    $('thin').innerHTML = T.map((t,i)=>`
+      <div class="sq ${i===active?'on':''}" style="--c:${t.c}" data-i="${i}">${t.tag}
+        <span class="tip">${t.id}<small>${t.shell} · ${t.cwd}</small></span>
+      </div>`).join('') + `<div class="plus">+</div>`;
+  }
+  function nextColor(){ return HUES.find(h=>!T.some(t=>t.c===h)) || HUES[T.length%HUES.length]; }
+  function renderNew(){
+    const p = PROFILES[prof], c = nextColor();
+    $('profiles').innerHTML = PROFILES.map((x,i)=>`<span class="pr ${i===prof?'on':''}" style="--c:${x.c}" data-i="${i}"><i></i>${x.n}</span>`).join('');
+    $('nName').textContent = 'term-'+nextN; $('nSw').style.background=c; $('nHex').textContent=c; $('nCwd').textContent=p.cwd;
+  }
+  function openNew(v){ newOpen=v; $('newt').classList.toggle('open',v); if(v) renderNew(); }
+  function createNew(){
+    const p = PROFILES[prof], c = nextColor(), id='term-'+(nextN++);
+    T.push({id, tag:id.slice(-2).toUpperCase(), c, shell:p.n.toLowerCase(), cwd:p.cwd, title:p.n+' — '+p.cwd, busy:false,
+      body:`<span class="p">❯</span> <span class="d"># fresh ${p.n} in ${p.cwd}</span>\n<span class="cursor"></span>`});
+    $('count').textContent = T.length+' windows';
+    openNew(false); setActive(T.length-1);
+  }
+  function setEdge(e){
+    $('desktop').classList.toggle('top', e==='top');
+    document.querySelectorAll('#edge button').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.edge===e)));
+  }
+  document.querySelectorAll('#edge button').forEach(b=>b.addEventListener('click',()=>setEdge(b.dataset.edge)));
+  $('profiles').addEventListener('click',e=>{const el=e.target.closest('[data-i]'); if(el){prof=+el.dataset.i; renderNew();}});
+  function renderLegend(){
+    $('legend').innerHTML = T.map(t=>`<span style="--c:${t.c}">${t.id} — ${t.shell}</span>`).join('');
+  }
+
+  function setConcept(c){
+    concept = c;
+    document.querySelectorAll('.concepts button').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.concept===c)));
+    $('strip').classList.toggle('hidden', c!=='A');
+    $('rail').classList.toggle('hidden', c!=='A');
+    $('thin').classList.toggle('hidden', c!=='C');
+    $('wt').classList.toggle('rail-open', c==='C');
+    railOpen = false; $('rail').classList.remove('open');
+    overlayOpen = (c==='B'); $('overlay').classList.toggle('open', overlayOpen);
+  }
+  function setActive(i){
+    active = i; renderAll();
+    if(concept==='B'){ overlayOpen=false; $('overlay').classList.remove('open'); }
+  }
+  function renderAll(){ renderWindow(); renderStrip(); renderRail(); renderGrid(); renderThin(); }
+
+  // events
+  document.querySelectorAll('.concepts button').forEach(b=>b.addEventListener('click',()=>setConcept(b.dataset.concept)));
+  $('strip').addEventListener('mouseenter',()=>{railOpen=true;$('rail').classList.add('open');});
+  $('strip').addEventListener('click',()=>{railOpen=!railOpen;$('rail').classList.toggle('open',railOpen);});
+  $('rail').addEventListener('mouseleave',()=>{railOpen=false;$('rail').classList.remove('open');});
+  ['railList','grid','thin'].forEach(id=>$(id).addEventListener('click',e=>{
+    const el = e.target.closest('[data-i]'); if(el) setActive(+el.dataset.i);
+  }));
+  $('overlay').addEventListener('click',e=>{ if(e.target===$('overlay')){overlayOpen=false;$('overlay').classList.remove('open');} });
+  $('desktop').addEventListener('keydown',e=>{
+    if(newOpen){
+      if(e.key==='Enter'){ createNew(); } else if(e.key==='Escape'){ openNew(false); }
+      else if(e.key==='Tab'){ prof=(prof+1)%PROFILES.length; renderNew(); }
+      e.preventDefault(); return;
+    }
+    if(e.key.toLowerCase()==='n'){ openNew(true); e.preventDefault(); }
+    else if(e.key>='1' && e.key<='9' && +e.key<=T.length){ setActive(+e.key-1); e.preventDefault(); }
+    else if(e.key==='`'){
+      if(concept==='A'){ railOpen=!railOpen; $('rail').classList.toggle('open',railOpen); }
+      else { overlayOpen=!overlayOpen; $('overlay').classList.toggle('open',overlayOpen); }
+      e.preventDefault();
+    } else if(e.key==='Escape'){ overlayOpen=false; $('overlay').classList.remove('open'); railOpen=false; $('rail').classList.remove('open'); }
+  });
+
+  renderAll(); renderLegend(); setConcept('A');
+})();
+</script>
+</body>
+</html>

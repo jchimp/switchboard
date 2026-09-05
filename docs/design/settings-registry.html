@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terminal mux — settings & registry</title>
+<style>
+  :root{
+    --page-bg:#eef0f4; --page-fg:#1b1f27; --page-muted:#5b6474; --page-line:#d5d9e1;
+    --app:#202329; --app2:#262a31; --app3:#2d323a; --line:#3a404b; --fg:#eef1f5; --muted:#9aa3b2; --dim:#6b7383;
+    --mono:"Cascadia Mono","JetBrains Mono","Consolas",ui-monospace,monospace;
+    --sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --page-bg:#14171d; --page-fg:#e6e8ec; --page-muted:#9aa3b2; --page-line:#2a3040; }
+  }
+  :root[data-theme="dark"]{ --page-bg:#14171d; --page-fg:#e6e8ec; --page-muted:#9aa3b2; --page-line:#2a3040; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page-bg);color:var(--page-fg);font-family:var(--sans);line-height:1.45}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:22px;font-weight:600;margin:0 0 4px}
+  .lede{color:var(--page-muted);margin:0 0 18px;max-width:72ch}
+
+  /* app window */
+  .app{background:var(--app);color:var(--fg);border-radius:8px;border:1px solid var(--page-line);overflow:hidden;display:grid;grid-template-columns:196px 1fr;min-height:640px;user-select:none}
+  .titlebar{grid-column:1/-1;height:34px;display:flex;align-items:center;padding:0 14px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--app2)}
+  .titlebar .ico{width:14px;height:14px;border-radius:3px;background:conic-gradient(#b07cf5,#4f8ef7,#22b8cf,#62c554,#f28c28,#e05c9b,#b07cf5);margin-right:8px;position:relative}
+  .titlebar .ico::after{content:"";position:absolute;inset:3px;border-radius:2px;background:#151515}
+  .titlebar .ctl{margin-left:auto;display:flex;gap:18px}
+
+  nav{border-right:1px solid var(--line);padding:12px 8px;display:flex;flex-direction:column;gap:2px}
+  nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;color:var(--muted);text-decoration:none;font-size:13px;cursor:pointer;position:relative}
+  nav a:hover{background:var(--app3);color:var(--fg)}
+  nav a.on{background:var(--app3);color:var(--fg)}
+  nav a.on::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:2px;background:#4f8ef7}
+  nav a .g{width:16px;height:16px;border-radius:3px;border:1.5px solid currentColor;opacity:.75}
+  nav .sp{flex:1}
+  nav .ver{font-size:11px;color:var(--dim);padding:8px 10px}
+
+  main{padding:18px 22px 24px;overflow:auto}
+  .page{display:none}.page.on{display:block}
+  h2{font-size:18px;font-weight:600;margin:0 0 2px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px;max-width:70ch}
+
+  /* registry list + editor */
+  .reg{display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start}
+  .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+  .btn{font:inherit;font-size:13px;padding:6px 12px;border-radius:5px;border:1px solid var(--line);background:var(--app2);color:var(--fg);cursor:pointer}
+  .btn.primary{background:#4f8ef7;border-color:#4f8ef7;color:#0b1020;font-weight:600}
+  .btn.ghost{background:transparent}
+  .toolbar .find{margin-left:auto;font:12px var(--mono);color:var(--dim);border:1px solid var(--line);border-radius:5px;padding:5px 10px;width:180px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:6px 10px;border-bottom:1px solid var(--line)}
+  td{padding:8px 10px;border-bottom:1px solid #2c313a;vertical-align:middle}
+  tr.row{cursor:pointer}
+  tr.row:hover td{background:var(--app2)}
+  tr.row.on td{background:var(--app3)}
+  tr.row.on td:first-child{box-shadow:inset 3px 0 0 var(--c)}
+  .sw{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--c);vertical-align:-2px;margin-right:8px}
+  .tag{font:600 11px var(--mono);color:var(--muted)}
+  .st{display:inline-flex;align-items:center;gap:6px;font-size:12px}
+  .st::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--sc,#6b7383)}
+  .st.working{--sc:var(--c)}.st.attention{--sc:#f2c94c}.st.idle{--sc:#6b7383}.st.closed{--sc:transparent;color:var(--dim)}
+  .st.closed::before{border:1px solid var(--dim)}
+  .st.working::before{box-shadow:0 0 8px var(--c)}
+  .mono{font:12px var(--mono);color:var(--muted)}
+  .drag{color:var(--dim);cursor:grab}
+  .key{font:11px var(--mono);border:1px solid var(--line);border-radius:4px;padding:1px 6px;color:var(--fg)}
+
+  .editor{background:var(--app2);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+  .editor h3{font-size:13.5px;margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .editor h3 .sw{width:14px;height:14px}
+  .f{margin-bottom:11px}
+  .f label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  .in{display:block;width:100%;font:13px var(--sans);padding:6px 9px;border-radius:5px;border:1px solid var(--line);background:var(--app);color:var(--fg)}
+  .in.mono{font:12px var(--mono);color:var(--fg)}
+  .in:focus{outline:2px solid #4f8ef7;outline-offset:-1px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .swatches{display:flex;gap:6px;flex-wrap:wrap}
+  .swatches i{width:22px;height:22px;border-radius:5px;background:var(--c);cursor:pointer;border:2px solid transparent}
+  .swatches i.on{border-color:#fff;box-shadow:0 0 0 1px var(--app)}
+  .rules{border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .rules div{display:grid;grid-template-columns:78px 1fr;gap:8px;padding:6px 9px;font-size:12px;border-bottom:1px solid var(--line);align-items:center}
+  .rules div:last-child{border-bottom:0}
+  .rules .r{color:var(--muted)}
+  .rules code{font:11.5px var(--mono);color:var(--fg)}
+  .editor .foot{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
+  .hint{font-size:11.5px;color:var(--dim);margin-top:4px}
+
+  /* strip page */
+  .prev{display:grid;grid-template-columns:1fr 280px;gap:18px;align-items:start}
+  .monitor{aspect-ratio:16/9;background:linear-gradient(160deg,#1b2438,#0f1524);border-radius:6px;position:relative;overflow:hidden;border:1px solid var(--line)}
+  .monitor .s{position:absolute;top:0;bottom:0;left:0;width:8px;display:flex;flex-direction:column}
+  .monitor .s span{flex:1;border-bottom:1px solid rgba(0,0,0,.4)}
+  .monitor .s span.glow{box-shadow:0 0 10px currentColor}
+  .monitor .s span.attn{animation:pulse 1.2s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.35}}
+  @media (prefers-reduced-motion:reduce){.monitor .s span.attn{animation:none;outline:1px solid #f2c94c}}
+  .monitor .win{position:absolute;left:14%;top:12%;width:70%;height:72%;border-radius:6px;background:#151515;box-shadow:0 0 0 1.5px #b07cf5,0 16px 40px rgba(0,0,0,.5)}
+  .monitor .bar{position:absolute;left:0;right:0;bottom:0;height:22px;background:rgba(20,24,34,.85)}
+  .monitor .lab{position:absolute;right:10px;top:8px;font-size:11px;color:var(--muted)}
+  .opts{display:flex;flex-direction:column;gap:12px}
+  .opt{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px}
+  .opt small{display:block;color:var(--dim);font-size:11.5px}
+  .tog{width:36px;height:20px;border-radius:10px;background:#4f8ef7;position:relative;flex:none}
+  .tog::after{content:"";position:absolute;top:3px;right:3px;width:14px;height:14px;border-radius:50%;background:#fff}
+  .tog.off{background:var(--line)}.tog.off::after{right:auto;left:3px;background:var(--muted)}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden;font-size:12px}
+  .seg span{padding:4px 9px;color:var(--muted)}
+  .seg span.on{background:var(--app3);color:var(--fg)}
+  .slider{height:4px;background:var(--line);border-radius:2px;position:relative;width:110px}
+  .slider::after{content:"";position:absolute;left:35%;top:-5px;width:14px;height:14px;border-radius:50%;background:#4f8ef7}
+
+  /* hotkeys */
+  .hk{width:100%;max-width:640px;border-collapse:collapse;font-size:13px}
+  .hk td{padding:9px 10px;border-bottom:1px solid #2c313a}
+  .hk td:last-child{text-align:right}
+  .hk kbd{font:12px var(--mono);border:1px solid var(--line);border-radius:4px;padding:2px 7px;color:var(--fg);background:var(--app2)}
+  .hk .grp{color:var(--muted);font-size:12px;padding-top:16px;border-bottom:0}
+
+  /* status page */
+  .states{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:760px;margin-bottom:18px}
+  .state{border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-size:12.5px}
+  .state b{display:flex;align-items:center;gap:7px;font-weight:600;margin-bottom:4px}
+  .state b::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--sc)}
+  .state p{margin:0;color:var(--muted)}
+  .src{max-width:760px;font-size:13px}
+  .src div{display:grid;grid-template-columns:34px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid #2c313a;align-items:start}
+  .src p{margin:0;color:var(--muted);font-size:12.5px}
+
+  .notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:22px}
+  .note h3{font-size:14px;font-weight:600;margin:0 0 6px}
+  .note p{margin:0 0 6px;color:var(--page-muted);font-size:13.5px;max-width:52ch}
+  @media (max-width:820px){.app{grid-template-columns:1fr}nav{flex-direction:row;overflow:auto;border-right:0;border-bottom:1px solid var(--line)}.reg,.prev{grid-template-columns:1fr}.states{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Settings &amp; registry</h1>
+  <p class="lede">The manager's own window. The registry is the source of truth: each entry knows how to launch its terminal, what color it owns, and how to tell whether it's working, idle, or wants you. Click a row to edit it; the left nav switches sections.</p>
+
+  <div class="app">
+    <div class="titlebar"><span class="ico"></span>Terminal mux — Settings<span class="ctl"><span>—</span><span>▢</span><span>✕</span></span></div>
+    <nav>
+      <a class="on" data-p="terminals"><span class="g"></span>Terminals</a>
+      <a data-p="strip"><span class="g"></span>Edge strip</a>
+      <a data-p="hotkeys"><span class="g"></span>Hotkeys</a>
+      <a data-p="status"><span class="g"></span>Status rules</a>
+      <a data-p="appearance"><span class="g"></span>Appearance</a>
+      <span class="sp"></span>
+      <span class="ver">v0.1 · registry.json</span>
+    </nav>
+
+    <main>
+      <!-- TERMINALS -->
+      <section class="page on" id="p-terminals">
+        <h2>Terminals</h2>
+        <p class="sub">One row per named Windows Terminal window. Order here is the order on the strip and the 1–9 jump keys.</p>
+        <div class="reg">
+          <div>
+            <div class="toolbar">
+              <button class="btn primary">+ Add terminal</button>
+              <button class="btn ghost">Launch all</button>
+              <button class="btn ghost">Import from running windows</button>
+              <span class="find">filter…</span>
+            </div>
+            <table>
+              <thead><tr><th></th><th>Name</th><th>Tag</th><th>Profile</th><th>Status</th><th>Key</th></tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+            <p class="hint" style="margin-top:8px">Drag ⋮⋮ to reorder. Closed terminals stay in the registry and launch on click.</p>
+          </div>
+
+          <div class="editor" id="editor"></div>
+        </div>
+      </section>
+
+      <!-- STRIP -->
+      <section class="page" id="p-strip">
+        <h2>Edge strip</h2>
+        <p class="sub">The always-visible glance layer. One segment per terminal; the active one glows, a terminal that wants attention pulses until you focus it.</p>
+        <div class="prev">
+          <div class="monitor">
+            <div class="s">
+              <span style="background:#b07cf5;color:#b07cf5" class="glow"></span>
+              <span style="background:#4f8ef7"></span>
+              <span style="background:#c9d43a"></span>
+              <span style="background:#62c554;color:#62c554" class="attn"></span>
+              <span style="background:#22b8cf"></span>
+              <span style="background:#f28c28"></span>
+            </div>
+            <div class="win"></div>
+            <div class="bar"></div>
+            <div class="lab">Monitor 1 · 3440×1440</div>
+          </div>
+          <div class="opts">
+            <div class="opt"><div>Edge<small>Which screen edge the strip lives on</small></div><span class="seg"><span class="on">Left</span><span>Right</span></span></div>
+            <div class="opt"><div>Monitor<small>Primary, or follow the cursor</small></div><span class="seg"><span class="on">Primary</span><span>Cursor</span></span></div>
+            <div class="opt"><div>Strip width<small>8 px · glows to 14 px when active</small></div><span class="slider"></span></div>
+            <div class="opt"><div>Open on hover<small>Slide the rail out after 250 ms</small></div><span class="tog"></span></div>
+            <div class="opt"><div>Reserve screen space<small>App-bar mode: maximized apps stop at the strip</small></div><span class="tog off"></span></div>
+            <div class="opt"><div>Hide over fullscreen<small>Games, video, RDP sessions</small></div><span class="tog"></span></div>
+            <div class="opt"><div>Live thumbnails in rail<small>DWM thumbnails, no screenshots</small></div><span class="tog"></span></div>
+            <div class="opt"><div>Show closed terminals<small>Dimmed segment, click to launch</small></div><span class="tog"></span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HOTKEYS -->
+      <section class="page" id="p-hotkeys">
+        <h2>Hotkeys</h2>
+        <p class="sub">Global, registered with RegisterHotKey so they work when you're buried three apps deep.</p>
+        <table class="hk">
+          <tr><td class="grp" colspan="2">Switcher</td></tr>
+          <tr><td>Open overlay switcher</td><td><kbd>Ctrl</kbd> <kbd>`</kbd></td></tr>
+          <tr><td>Hold to peek, release to close</td><td><span class="tog"></span></td></tr>
+          <tr><td>Cycle to most-recent terminal</td><td><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>`</kbd></td></tr>
+          <tr><td>Jump to terminal 1–9 (while overlay is open)</td><td><kbd>1</kbd> … <kbd>9</kbd></td></tr>
+          <tr><td>Jump to terminal 1–9 (always)</td><td><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>1</kbd> … <kbd>9</kbd></td></tr>
+          <tr><td>Jump to the terminal wanting attention</td><td><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>Space</kbd></td></tr>
+          <tr><td class="grp" colspan="2">Strip</td></tr>
+          <tr><td>Toggle rail open</td><td><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>`</kbd></td></tr>
+          <tr><td>Hide strip for 30 min</td><td><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>H</kbd></td></tr>
+          <tr><td class="grp" colspan="2">Windows</td></tr>
+          <tr><td>Launch missing terminals</td><td><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>L</kbd></td></tr>
+          <tr><td>Re-apply frame colors (after a WT restart)</td><td><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>R</kbd></td></tr>
+        </table>
+      </section>
+
+      <!-- STATUS -->
+      <section class="page" id="p-status">
+        <h2>Status rules</h2>
+        <p class="sub">How the manager decides what each segment means. WT doesn't publish activity, so status is inferred from things the manager can observe from outside the window.</p>
+        <div class="states">
+          <div class="state" style="--sc:#b07cf5"><b>Working</b><p>Title matches a busy pattern, or output is still scrolling.</p></div>
+          <div class="state" style="--sc:#f2c94c"><b>Attention</b><p>Bell, a "done"/"waiting" title, or the window flashed. Pulses until focused.</p></div>
+          <div class="state" style="--sc:#6b7383"><b>Idle</b><p>Prompt visible, nothing for 20 s.</p></div>
+          <div class="state" style="--sc:transparent;border-color:var(--line)"><b style="--sc:var(--line)">Closed</b><p>No window found. Segment dims; click launches.</p></div>
+        </div>
+        <div class="src">
+          <div><span class="tog"></span><div>Window title changes <p>WinEvent hook on <code>EVENT_OBJECT_NAMECHANGE</code>. Cheapest signal, and your shells already set titles — Claude Code, pwsh prompts, vite, and htop all do. Per-terminal regexes map titles to states.</p></div></div>
+          <div><span class="tog"></span><div>Taskbar flash <p><code>EVENT_OBJECT_SHOW</code>/flash detection — catches BEL from any shell without you configuring anything.</p></div></div>
+          <div><span class="tog"></span><div>Thumbnail motion <p>Diff the DWM thumbnail every second; changing pixels = working. Catches long builds that never touch the title.</p></div></div>
+          <div><span class="tog off"></span><div>Named pipe from the shell <p>Opt-in: a one-line hook in your PowerShell profile or <code>.bashrc</code> writes <code>state=attention</code> to <code>\\.\pipe\termmux</code>. Exact, but needs setup per shell.</p></div></div>
+        </div>
+      </section>
+
+      <!-- APPEARANCE -->
+      <section class="page" id="p-appearance">
+        <h2>Appearance</h2>
+        <p class="sub">Where the terminal's color shows up. All three are applied by the manager, not by Windows Terminal settings.</p>
+        <div class="opts" style="max-width:520px">
+          <div class="opt"><div>Window frame color<small>DWMWA_BORDER_COLOR on the WT window (Windows 11)</small></div><span class="tog"></span></div>
+          <div class="opt"><div>Dim frame when unfocused<small>60% of the terminal color</small></div><span class="tog"></span></div>
+          <div class="opt"><div>Title prefix<small>Prepend the name so it survives Alt-Tab: "anvil · claude — ~/anvil"</small></div><span class="tog"></span></div>
+          <div class="opt"><div>Tab color<small>Passed as --tabColor at launch</small></div><span class="tog"></span></div>
+          <div class="opt"><div>Rail thumbnail size<small>Small · Medium · Large</small></div><span class="seg"><span>S</span><span class="on">M</span><span>L</span></span></div>
+          <div class="opt"><div>Theme<small>Follow Windows, or pin dark</small></div><span class="seg"><span class="on">System</span><span>Dark</span></span></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h3>What lives in registry.json</h3>
+      <p>Name, tag, color, WT profile, working directory, an optional startup command, the jump key, and the status rules. That file is the whole product state — easy to back up, diff, and hand-edit.</p>
+    </div>
+    <div class="note">
+      <h3>How a row becomes a window</h3>
+      <p><code>wt -w anvil new-tab -p "Ubuntu" -d ~/anvil --title "anvil" --tabColor "#b07cf5" -- claude --resume</code>. The manager then finds the HWND by class + title, stores it, and applies the frame color.</p>
+    </div>
+    <div class="note">
+      <h3>Why status is its own section</h3>
+      <p>The strip is only worth having if "something changed" is reliable. Title hooks and thumbnail motion give you that with zero shell config; the pipe is the precision upgrade when you want it.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const T = [
+    {id:'anvil',       tag:'AN', c:'#b07cf5', profile:'Ubuntu (WSL)', cwd:'~/anvil',           cmd:'claude --resume', st:'working',   key:1,
+     rules:[['working','^claude.*\\b(thinking|running)\\b'],['attention','^claude.*\\b(waiting|done)\\b'],['idle','^claude']]},
+    {id:'bistrack',    tag:'BT', c:'#4f8ef7', profile:'PowerShell 7', cwd:'C:\\ops\\bistrack',  cmd:'',                st:'idle',      key:2,
+     rules:[['working','\\.ps1'],['attention','\\berror\\b']]},
+    {id:'loadout-api', tag:'LA', c:'#c9d43a', profile:'Ubuntu (WSL)', cwd:'~/loadout/api',     cmd:'uv run fastapi dev app/main.py', st:'working', key:3,
+     rules:[['working','Reloading'],['attention','Error|Traceback']]},
+    {id:'loadout-web', tag:'LW', c:'#62c554', profile:'Ubuntu (WSL)', cwd:'~/loadout/web',     cmd:'npm run dev',     st:'attention', key:4,
+     rules:[['attention','TS\\d{4}|error'],['working','hmr update']]},
+    {id:'docker',      tag:'DK', c:'#22b8cf', profile:'Ubuntu (WSL)', cwd:'~/loadout',         cmd:'docker compose logs -f', st:'idle', key:5,
+     rules:[['attention','exited with code']]},
+    {id:'scratch',     tag:'SC', c:'#f28c28', profile:'Ubuntu (WSL)', cwd:'~',                 cmd:'',                st:'closed',    key:6,
+     rules:[]},
+  ];
+  let sel = 0;
+  const $ = id => document.getElementById(id);
+  const stLabel = {working:'Working',idle:'Idle',attention:'Attention',closed:'Closed'};
+
+  function rows(){
+    $('rows').innerHTML = T.map((t,i)=>`
+      <tr class="row ${i===sel?'on':''}" style="--c:${t.c}" data-i="${i}">
+        <td class="drag">⋮⋮</td>
+        <td><span class="sw"></span>${t.id}</td>
+        <td class="tag">${t.tag}</td>
+        <td class="mono">${t.profile}</td>
+        <td><span class="st ${t.st}">${stLabel[t.st]}</span></td>
+        <td><span class="key">${t.key}</span></td>
+      </tr>`).join('');
+  }
+  function editor(){
+    const t = T[sel];
+    const colors = ['#b07cf5','#4f8ef7','#c9d43a','#62c554','#22b8cf','#f28c28','#e05c9b','#ef6b6b'];
+    $('editor').innerHTML = `
+      <h3><span class="sw" style="--c:${t.c}"></span>${t.id}</h3>
+      <div class="row2">
+        <div class="f"><label>Name</label><input class="in" value="${t.id}"></div>
+        <div class="f"><label>Tag</label><input class="in mono" value="${t.tag}" maxlength="2"></div>
+      </div>
+      <div class="f"><label>Color</label><div class="swatches">${colors.map(c=>`<i style="--c:${c}" class="${c===t.c?'on':''}"></i>`).join('')}</div></div>
+      <div class="f"><label>Windows Terminal profile</label><input class="in" value="${t.profile}"></div>
+      <div class="f"><label>Working directory</label><input class="in mono" value="${t.cwd.replace(/\\/g,'\\\\')}"></div>
+      <div class="f"><label>Run on launch <span style="color:var(--dim)">(optional)</span></label><input class="in mono" value="${t.cmd}" placeholder="leave empty for a plain shell"></div>
+      <div class="row2">
+        <div class="f"><label>Jump key</label><input class="in mono" value="${t.key}"></div>
+        <div class="f"><label>Window name (wt -w)</label><input class="in mono" value="${t.id}" disabled></div>
+      </div>
+      <div class="f"><label>Status rules — title regex → state</label>
+        <div class="rules">${t.rules.length ? t.rules.map(r=>`<div><span class="r">${r[0]}</span><code>${r[1]}</code></div>`).join('') : '<div><span class="r">none</span><code style="color:var(--dim)">falls back to global rules</code></div>'}</div>
+        <div class="hint">Evaluated top to bottom on every title change. Global rules run after these.</div>
+      </div>
+      <div class="foot"><button class="btn ghost">Launch</button><button class="btn ghost">Focus</button><button class="btn primary">Save</button></div>`;
+  }
+  $('rows').addEventListener('click',e=>{const r=e.target.closest('tr[data-i]'); if(r){sel=+r.dataset.i; rows(); editor();}});
+  document.querySelectorAll('nav a[data-p]').forEach(a=>a.addEventListener('click',()=>{
+    document.querySelectorAll('nav a').forEach(x=>x.classList.toggle('on',x===a));
+    document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id==='p-'+a.dataset.p));
+  }));
+  rows(); editor();
+})();
+</script>
+</body>
+</html>

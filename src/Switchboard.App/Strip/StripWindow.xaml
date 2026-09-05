@@ -1,0 +1,63 @@
+<Window x:Class="Switchboard.App.Strip.StripWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Switchboard.App.ViewModels"
+        Title="Switchboard strip"
+        WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
+        Background="Transparent" ShowInTaskbar="False" Topmost="True"
+        ShowActivated="False" Focusable="False">
+  <Border Background="{StaticResource StripBackground}">
+    <!-- The menu popup is its own HWND and takes focus only while open, at the user's
+         explicit request; focus returns on close. The strip itself never activates (ADR-0006). -->
+    <Border.ContextMenu>
+      <ContextMenu>
+        <MenuItem Header="Reapply colors" Command="{Binding ReapplyColorsCommand}" />
+        <MenuItem Header="Reload registry" Command="{Binding ReloadRegistryCommand}" />
+        <Separator />
+        <MenuItem Header="Quit Switchboard" Command="{Binding QuitCommand}" />
+      </ContextMenu>
+    </Border.ContextMenu>
+    <ItemsControl ItemsSource="{Binding Items}" x:Name="Segments">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <UniformGrid x:Name="Panel" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate DataType="{x:Type vm:TerminalItemViewModel}">
+          <Border x:Name="Seg"
+                  Background="{Binding Brush}"
+                  Opacity="{Binding Opacity}"
+                  BorderBrush="{StaticResource StripSeparator}" BorderThickness="0,0,1,1"
+                  ToolTip="{Binding ToolTip}"
+                  Cursor="Hand"
+                  MouseLeftButtonUp="Segment_Click">
+            <Border.Effect>
+              <DropShadowEffect ShadowDepth="0" BlurRadius="{Binding GlowRadius}" Color="{Binding Brush.Color}" />
+            </Border.Effect>
+            <!-- Brightness overlay the pulse animates: a color pulse reads even in the
+                 2 px auto-hide sliver, and it leaves Seg.Opacity to its binding. -->
+            <Border x:Name="PulseOverlay" Background="White" Opacity="0" IsHitTestVisible="False" />
+          </Border>
+          <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding WantsAttention}" Value="True">
+              <DataTrigger.EnterActions>
+                <!-- Attention pulse: the one piece of unprompted motion in the product. -->
+                <BeginStoryboard x:Name="PulseStart">
+                  <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                    <DoubleAnimation Storyboard.TargetName="PulseOverlay"
+                                     Storyboard.TargetProperty="Opacity"
+                                     From="0" To="0.45" Duration="0:0:0.6" />
+                  </Storyboard>
+                </BeginStoryboard>
+              </DataTrigger.EnterActions>
+              <DataTrigger.ExitActions>
+                <StopStoryboard BeginStoryboardName="PulseStart" />
+              </DataTrigger.ExitActions>
+            </DataTrigger>
+          </DataTemplate.Triggers>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </Border>
+</Window>

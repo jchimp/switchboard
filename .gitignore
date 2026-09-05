@@ -1,0 +1,15 @@
+docs/private/
+*.local.md
+
+*.tmp*
+*.bak*
+*.orig*
+
+bin/
+obj/
+.vs/
+*.user
+*.suo
+TestResults/
+publish/
+*.bak

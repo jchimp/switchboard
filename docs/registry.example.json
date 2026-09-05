@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "hideFromTaskbar": false,
+  "strip": { "edge": "top", "thickness": 8, "activeThickness": 14, "openRailOnHover": true, "reserveScreenSpace": false,
+    "autoHide": false, "hiddenThickness": 2, "collapseDelayMs": 800 },
+  "hotkeys": { "openSwitcher": "Ctrl+`", "newTerminal": "Ctrl+Alt+N", "jumpPrefix": "Ctrl+Alt" },
+  "quickLaunch": { "defaultProfile": "Ubuntu", "defaultShell": "wsl", "defaultDistro": "Ubuntu", "namePrefix": "term-" },
+  "terminals": [
+    { "name": "anvil", "tag": "AN", "color": "#B07CF5", "profile": "Ubuntu", "shell": "wsl", "distro": "Ubuntu",
+      "workingDirectory": "~/anvil", "command": "claude --resume", "jumpKey": 1,
+      "statusRules": [
+        { "state": "attention", "pattern": "\\b(waiting|done)\\b" },
+        { "state": "working",   "pattern": "\\b(thinking|running)\\b" } ] },
+    { "name": "bistrack", "tag": "BT", "color": "#4F8EF7", "profile": "PowerShell", "shell": "pwsh",
+      "workingDirectory": "C:\\ops\\bistrack", "jumpKey": 2 },
+    { "name": "loadout-api", "tag": "LA", "color": "#C9D43A", "profile": "Ubuntu", "shell": "wsl", "distro": "Ubuntu",
+      "workingDirectory": "~/loadout/api", "command": "uv run fastapi dev app/main.py", "jumpKey": 3 },
+    { "name": "loadout-web", "tag": "LW", "color": "#62C554", "profile": "Ubuntu", "shell": "wsl", "distro": "Ubuntu",
+      "workingDirectory": "~/loadout/web", "command": "npm run dev", "jumpKey": 4,
+      "statusRules": [ { "state": "attention", "pattern": "TS\\d{4}|error" } ] },
+    { "name": "docker", "tag": "DK", "color": "#22B8CF", "profile": "Ubuntu", "shell": "wsl", "distro": "Ubuntu",
+      "workingDirectory": "~/loadout", "command": "docker compose logs -f", "jumpKey": 5 },
+    { "name": "scratch", "tag": "SC", "color": "#F28C28", "profile": "Ubuntu", "shell": "wsl", "distro": "Ubuntu", "jumpKey": 6 }
+  ]
+}
