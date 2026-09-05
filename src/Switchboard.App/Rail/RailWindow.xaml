@@ -100,6 +100,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                   </Grid.ColumnDefinitions>
                   <!-- Thumb slot: dark background shows through when no live thumbnail is
                        registered (Closed terminals); a live DWM thumbnail is drawn directly
@@ -130,11 +131,17 @@
                                FontFamily="Cascadia Mono,Consolas"
                                Foreground="{StaticResource RailSub}" />
                   </Border>
+                  <!-- Rename/recolor affordance; revealed on row hover (ADR-0014). -->
+                  <TextBlock x:Name="EditPencil" Grid.Column="3" Text="✎" FontSize="12"
+                             Foreground="{StaticResource RailMuted}" Cursor="Hand"
+                             Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Hidden"
+                             MouseLeftButtonUp="Rename_Click" />
                 </Grid>
               </Border>
               <DataTemplate.Triggers>
                 <Trigger SourceName="Card" Property="IsMouseOver" Value="True">
                   <Setter TargetName="Card" Property="Background" Value="{StaticResource RailHover}" />
+                  <Setter TargetName="EditPencil" Property="Visibility" Value="Visible" />
                 </Trigger>
                 <DataTrigger Binding="{Binding IsActive}" Value="True">
                   <Setter TargetName="Card" Property="BorderBrush" Value="{Binding Brush}" />
