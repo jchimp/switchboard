@@ -54,6 +54,15 @@ public sealed record TerminalDefinition
     /// <summary>Per-terminal status rules, evaluated before the global rules.</summary>
     public IReadOnlyList<StatusRule> StatusRules { get; init; } = [];
 
+    /// <summary>
+    /// HWND of the window last bound to this terminal, written on every bind. Restart
+    /// recovery tries this before title matching: handles survive a manager restart while
+    /// titles drift, and a stale handle (reboot) fails window-class validation safely
+    /// (ADR-0002 amendment). Runtime state, but the registry is the only durable store
+    /// (invariant 3). Not user-edited.
+    /// </summary>
+    public long? LastHwnd { get; init; }
+
     private static readonly Regex NamePattern = new("^[a-z0-9][a-z0-9-]{0,31}$", RegexOptions.Compiled);
     private static readonly Regex ColorPattern = new("^#[0-9a-fA-F]{6}$", RegexOptions.Compiled);
 
