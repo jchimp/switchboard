@@ -66,6 +66,25 @@ public class StatusEngineTests
     }
 
     [Fact]
+    public void Rename_moves_state_and_attention_survives()
+    {
+        var (engine, _, events) = Make();
+        engine.WindowAppeared(Anvil);
+        engine.Flashed(Anvil);
+        events.Clear();
+
+        var renamed = Anvil with { Name = "forge" };
+        engine.Renamed("anvil", renamed);
+
+        Assert.Equal(TerminalState.Closed, engine.StateOf("anvil"));
+        Assert.Equal(TerminalState.Attention, engine.StateOf("forge"));
+        Assert.Equal([("anvil", TerminalState.Closed), ("forge", TerminalState.Attention)], events);
+
+        engine.Focused("forge"); // the sanctioned clear still works on the new name
+        Assert.Equal(TerminalState.Idle, engine.StateOf("forge"));
+    }
+
+    [Fact]
     public void Attention_is_sticky_until_focused()
     {
         var (engine, time, _) = Make();
