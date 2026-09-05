@@ -422,11 +422,52 @@ public partial class RailWindow : Window, IDisposable
         }
 
         var newItem = new MenuItem { Header = "New terminal…" };
-        newItem.Click += async (_, _) => await _vm.AdoptAsNewAsync(window.Hwnd);
+        newItem.Click += (_, _) =>
+        {
+            var seed = _vm.AdoptSeed();
+            ShowEditPopup(element, "Adopt as new terminal", seed.Name, seed.Color,
+                (name, color) => _vm.AdoptAsNewAsync(window.Hwnd, name, color));
+        };
         menu.Items.Add(newItem);
 
         element.ContextMenu = menu;
         menu.PlacementTarget = element;
         menu.IsOpen = true;
+    }
+
+    private void Rename_Click(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true; // must not bubble into Row_Click and focus the terminal
+        if (sender is FrameworkElement { DataContext: RailItemViewModel item } element)
+        {
+            ShowEditPopup(element, $"Edit {item.Name}", item.Name, item.Definition.Color,
+                (name, color) => _vm.UpdateTerminalAsync(item.Name, name, color));
+        }
+    }
+
+    /// <summary>
+    /// Opens the one activatable window in the product (ADR-0012/0014), anchored under the
+    /// clicked element. Modal; the hover probe holds while it's up, and the popup restores
+    /// the previous foreground window itself when it closes.
+    /// </summary>
+    private void ShowEditPopup(
+        FrameworkElement anchor, string title, string name, string color,
+        Func<string, string, Task<string?>> commit)
+    {
+        var popup = new RailEditPopup(title, name, color, commit);
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var below = anchor.PointToScreen(new Point(0, anchor.ActualHeight + 4));
+        popup.Left = below.X / dpi.DpiScaleX;
+        popup.Top = below.Y / dpi.DpiScaleY;
+
+        _menuOpen = true;
+        try
+        {
+            popup.ShowDialog();
+        }
+        finally
+        {
+            _menuOpen = false;
+        }
     }
 }
