@@ -225,6 +225,60 @@ public sealed class TerminalSession : IDisposable
         RegistryChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Applies a rename/recolor from the rail (ADR-0014). The window stays bound by HWND
+    /// through a rename: tracker rekeyed, status entry moved (Attention survives), frame
+    /// repainted. Throws <see cref="ArgumentException"/> with a user-facing message when
+    /// validation fails; the popup shows it inline.
+    /// </summary>
+    public async Task UpdateTerminalAsync(string oldName, TerminalDefinition updated)
+    {
+        if (Definition(oldName) is null)
+        {
+            return; // removed underneath the popup (hot-reload); nothing to update
+        }
+
+        if (updated.Validate() is { } error)
+        {
+            throw new ArgumentException(error);
+        }
+
+        if (updated.Name != oldName && Registry.Terminals.Any(t => t.Name == updated.Name))
+        {
+            throw new ArgumentException($"Name '{updated.Name}' is already in use.");
+        }
+
+        Registry = Registry with
+        {
+            Terminals = Registry.Terminals.Select(t => t.Name == oldName ? updated : t).ToList(),
+        };
+
+        if (updated.Name != oldName)
+        {
+            _tracker.Rekey(oldName, updated.Name);
+            _status.Renamed(oldName, updated);
+            _motion.Forget(oldName); // the new name starts from a fresh pixel baseline
+            if (_foregroundName == oldName)
+            {
+                _foregroundName = updated.Name;
+            }
+
+            if (_previousForegroundName == oldName)
+            {
+                _previousForegroundName = updated.Name;
+            }
+        }
+
+        if (_tracker.Find(updated.Name) is { } live)
+        {
+            _colorizer.Apply(live.Hwnd, updated.Color, focused: updated.Name == _foregroundName);
+        }
+
+        await PersistAsync();
+        RegistryChanged?.Invoke();
+        _log.LogInformation("Updated terminal '{Old}' → '{New}'", oldName, updated.Name);
+    }
+
     public async Task RemoveTerminalAsync(string name)
     {
         Registry = Registry with { Terminals = Registry.Terminals.Where(t => t.Name != name).ToList() };
