@@ -1,7 +1,16 @@
 # Project Progress
 
 ## Current Focus
-M1 code-complete plus two pulled-forward M2 items (taskbar hiding, strip auto-hide). Remaining: manual verification on real hardware, then daily use + status-rule tuning for M1 exit.
+M2 underway, slice-by-slice with manual verification between slices (plan approved 2026-09-04). Slice 1 (app-bar mode + hide over fullscreen, ADR-0011) is code-complete and awaits manual verification. M1 exit (daily-use week) runs in parallel.
+
+## M2 Slices
+- [x] Slice 1: app-bar mode (`reserveScreenSpace`) + hide over fullscreen — ADR-0011; needs manual verify
+- [ ] Manual verify Slice 1: maximized windows stop at strip; fullscreen video hides strip (same monitor only); live toggle via registry.json; no drift on repeated re-docks
+- [ ] Slice 2: rail shell (geometry, RailWindow, hover/hotkey open-close) — ADR-0012 first
+- [ ] Slice 3: DWM live thumbnails per row
+- [ ] Slice 4: thumbnail-motion status source — ADR-0013 first
+- [ ] Slice 5: adopt unbound windows
+- [ ] Slice 6: inline rename/recolor — ADR-0014 first
 
 ## Open Todos
 - [x] First Windows build: fix compiler/analyzer errors, tests green
@@ -33,3 +42,5 @@ M1 code-complete plus two pulled-forward M2 items (taskbar hiding, strip auto-hi
 - Attention review: title match is the only live path (`StatusEngine.Flashed` is dead code — no BEL/flash detection wired); default trigger words are broad, expect false positives.
 - Fixed: attention raised on the already-focused window now clears immediately instead of pulsing until refocus. Added sticky test for the title-driven path; 55/55 tests.
 - New `tools/Test-Attention.ps1`: manual end-to-end pulse test (retitles the terminal with a trigger word after a delay).
+- M2 planned: six slices, four new ADRs (0011–0014). Decisions: rail is a second non-activating window with a focusable edit popup; live rename applies immediately with unbound-after-restart as the degraded path; motion source polls PrintWindow hashes on the existing 1 s tick (default on); adopt list populated on rail-open only. No registry version bump anywhere.
+- Slice 1 done: `AppBar` wrapper (ABM_NEW/QUERYPOS/SETPOS negotiation from full monitor bounds — new `MonitorBounds.Bounds` + pure `ComputeAppBar`, 3 new tests), `FullscreenDetector` (foreground-event-driven, same-monitor only, desktop classes excluded), strip hides via `Visibility` on ABN_FULLSCREENAPP (app-bar path) or foreground checks (otherwise). 58/58 tests.
