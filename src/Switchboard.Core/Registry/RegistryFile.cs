@@ -56,6 +56,12 @@ public sealed record StripSettings
 
     public int HoverOpenDelayMs { get; init; } = 250;
 
+    /// <summary>Rail width in DIPs when docked to a vertical edge (ADR-0012).</summary>
+    public int RailSizeDips { get; init; } = 236;
+
+    /// <summary>Rail height in DIPs when docked to the top edge.</summary>
+    public int RailTopHeightDips { get; init; } = 150;
+
     /// <summary>App-bar mode: reserve the strip's pixels so maximized windows stop at it.</summary>
     public bool ReserveScreenSpace { get; init; }
 
