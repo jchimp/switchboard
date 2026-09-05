@@ -4,9 +4,9 @@
 M2 underway, slice-by-slice with manual verification between slices (plan approved 2026-09-04). Slice 1 (app-bar mode + hide over fullscreen, ADR-0011) is code-complete and awaits manual verification. M1 exit (daily-use week) runs in parallel.
 
 ## M2 Slices
-- [x] Slice 1: app-bar mode (`reserveScreenSpace`) + hide over fullscreen — ADR-0011; needs manual verify
-- [ ] Manual verify Slice 1: maximized windows stop at strip; fullscreen video hides strip (same monitor only); live toggle via registry.json; no drift on repeated re-docks
-- [ ] Slice 2: rail shell (geometry, RailWindow, hover/hotkey open-close) — ADR-0012 first
+- [x] Slice 1: app-bar mode (`reserveScreenSpace`) + hide over fullscreen — ADR-0011; verified by Jeremy
+- [x] Slice 2: rail shell (geometry, RailWindow, hover/hotkey open-close) — ADR-0012; needs manual verify
+- [ ] Manual verify Slice 2: hover strip ~250 ms opens rail (Ctrl+Alt+` toggles); rows show name/sub/key, closed dimmed, active outlined; row click focuses + closes; mouse-leave closes; "+ New terminal" works; no terminal ever loses focus while the rail opens; auto-hide strip stays out while rail open
 - [ ] Slice 3: DWM live thumbnails per row
 - [ ] Slice 4: thumbnail-motion status source — ADR-0013 first
 - [ ] Slice 5: adopt unbound windows
@@ -43,4 +43,5 @@ M2 underway, slice-by-slice with manual verification between slices (plan approv
 - Fixed: attention raised on the already-focused window now clears immediately instead of pulsing until refocus. Added sticky test for the title-driven path; 55/55 tests.
 - New `tools/Test-Attention.ps1`: manual end-to-end pulse test (retitles the terminal with a trigger word after a delay).
 - M2 planned: six slices, four new ADRs (0011–0014). Decisions: rail is a second non-activating window with a focusable edit popup; live rename applies immediately with unbound-after-restart as the degraded path; motion source polls PrintWindow hashes on the existing 1 s tick (default on); adopt list populated on rail-open only. No registry version bump anywhere.
-- Slice 1 done: `AppBar` wrapper (ABM_NEW/QUERYPOS/SETPOS negotiation from full monitor bounds — new `MonitorBounds.Bounds` + pure `ComputeAppBar`, 3 new tests), `FullscreenDetector` (foreground-event-driven, same-monitor only, desktop classes excluded), strip hides via `Visibility` on ABN_FULLSCREENAPP (app-bar path) or foreground checks (otherwise). 58/58 tests.
+- Slice 1 done: `AppBar` wrapper (ABM_NEW/QUERYPOS/SETPOS negotiation from full monitor bounds — new `MonitorBounds.Bounds` + pure `ComputeAppBar`, 3 new tests), `FullscreenDetector` (foreground-event-driven, same-monitor only, desktop classes excluded), strip hides via `Visibility` on ABN_FULLSCREENAPP (app-bar path) or foreground checks (otherwise). 58/58 tests. Verified by Jeremy (autoHide correctly yields to reserveScreenSpace per ADR-0010).
+- Slice 2 done: pure `RailPlacement` (adjacent band + off-screen hidden rect, DPI-scaled), `RailSizeDips`/`RailTopHeightDips` settings (no version bump), `RailWindow` (non-activating tool window, 220 ms slide, hidden-not-closed, mouse-leave closes — no Esc: a no-focus window can't hear keys, noted in ADR-0012), `RailViewModel` with incremental name-keyed sync (no Clear(): Slice 3 thumbnails must survive state changes), Concept A card layout with placeholder thumb slot, hover-open from strip (`openRailOnHover`/`hoverOpenDelayMs`), `Ctrl+Alt+`` bound, auto-hide suppressed while rail open. 66/66 tests.
