@@ -25,11 +25,14 @@ failure the strip's invariant 7 exists to prevent. But M2 also promises inline r
   the M3 overlay switcher, which is activatable by design.
 - Clicking a strip segment keeps its R13 meaning (focus that terminal); it does not toggle
   the rail. Hover and the chord are the only openers.
-- Geometry is pure Core (`RailPlacement`): a band adjacent to the strip on the same edge —
-  vertical panel for left/right, full-width drop-down for top (ADR-0006's rationale for the
-  top default). The Windows layer applies physical pixels via `SetWindowPos` (ADR-0007).
-- While the rail is open, the auto-hidden strip does not collapse (the rail is anchored to
-  the full-thickness strip; collapsing under it would leave a gap).
+- Geometry is pure Core (`RailPlacement`): a band on the strip's edge — vertical panel for
+  left/right, full-width drop-down for top (ADR-0006's rationale for the top default). The
+  Windows layer applies physical pixels via `SetWindowPos` (ADR-0007).
+- *(Amended 2026-09-04)* The rail anchors at the **screen edge and covers the strip while
+  open** — exactly the Concept A mockup. Its geometry never depends on the strip's current
+  thickness (sliver, full, or attention-expanded), the strip needs no held-open state while
+  the rail is out, and with `openRailOnHover` on, hover doesn't expand the sliver at all
+  (the two chained animations read as a bounce; see the ADR-0010 amendment).
 
 ## Consequences
 - Two always-alive windows instead of one; the rail is hidden, not closed, between uses.
