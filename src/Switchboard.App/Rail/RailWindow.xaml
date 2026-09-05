@@ -18,6 +18,16 @@
   </Window.Resources>
   <Border Background="{StaticResource RailBackground}"
           BorderBrush="{StaticResource RailBorder}" BorderThickness="1">
+    <!-- Same escape hatch as the strip's menu (ADR-0006/0012): the popup is its own HWND
+         and takes focus only while open, at the user's explicit request. -->
+    <Border.ContextMenu>
+      <ContextMenu Opened="RailMenu_Opened" Closed="RailMenu_Closed">
+        <MenuItem Header="Reapply colors" Command="{Binding ReapplyColorsCommand}" />
+        <MenuItem Header="Reload registry" Command="{Binding ReloadRegistryCommand}" />
+        <Separator />
+        <MenuItem Header="Quit Switchboard" Command="{Binding QuitCommand}" />
+      </ContextMenu>
+    </Border.ContextMenu>
     <DockPanel>
       <DockPanel DockPanel.Dock="Top" Margin="12,10,12,6">
         <TextBlock Text="Terminals" FontSize="11" FontWeight="SemiBold"
@@ -34,7 +44,7 @@
         </Border>
       </Border>
       <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                    x:Name="ListScroller" Padding="8,0,8,8">
+                    x:Name="ListScroller" Padding="8,0,8,8" ScrollChanged="ListScroller_ScrollChanged">
         <ItemsControl ItemsSource="{Binding Items}" x:Name="Rows">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
@@ -53,8 +63,10 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                   </Grid.ColumnDefinitions>
-                  <!-- Thumb slot: dark placeholder until Slice 3 hangs a DWM thumbnail here. -->
-                  <Border Grid.Column="0" Width="76" Height="46" CornerRadius="3"
+                  <!-- Thumb slot: dark background shows through when no live thumbnail is
+                       registered (Closed terminals); a live DWM thumbnail is drawn directly
+                       into this rect of the rail's own window (RailWindow.SyncThumbnails). -->
+                  <Border x:Name="ThumbSlot" Grid.Column="0" Width="76" Height="46" CornerRadius="3"
                           Background="#FF101010"
                           BorderBrush="{Binding Brush}" BorderThickness="3,0,0,0" />
                   <StackPanel Grid.Column="1" Margin="8,0" VerticalAlignment="Center">
