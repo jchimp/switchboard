@@ -5,6 +5,9 @@ namespace Switchboard.Windows;
 /// <summary>Brings a terminal window to the front, restoring it if minimized.</summary>
 public static class WindowFocuser
 {
+    /// <summary>The current foreground window; the edit popup restores this on close (ADR-0014).</summary>
+    public static nint CurrentForeground() => NativeMethods.GetForegroundWindow();
+
     public static bool Focus(nint hwnd)
     {
         if (hwnd == 0 || !NativeMethods.IsWindow(hwnd))
