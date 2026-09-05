@@ -210,6 +210,51 @@ internal static partial class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetWindowPos(nint hwnd, nint hwndInsertAfter, int x, int y, int width, int height, uint flags);
 
+    // ---- Motion sampling (PrintWindow + GDI downscale, ADR-0013) ------------------------
+
+    public const uint PW_RENDERFULLCONTENT = 2; // WT is composition-rendered; plain PrintWindow returns black
+    public const int HALFTONE = 4;
+    public const uint SRCCOPY = 0x00CC0020;
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool PrintWindow(nint hwnd, nint hdc, uint flags);
+
+    [DllImport("user32.dll")]
+    public static extern nint GetDC(nint hwnd);
+
+    [DllImport("user32.dll")]
+    public static extern int ReleaseDC(nint hwnd, nint hdc);
+
+    [DllImport("gdi32.dll")]
+    public static extern nint CreateCompatibleDC(nint hdc);
+
+    [DllImport("gdi32.dll")]
+    public static extern nint CreateCompatibleBitmap(nint hdc, int width, int height);
+
+    [DllImport("gdi32.dll")]
+    public static extern nint SelectObject(nint hdc, nint gdiObject);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DeleteObject(nint gdiObject);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DeleteDC(nint hdc);
+
+    [DllImport("gdi32.dll")]
+    public static extern int SetStretchBltMode(nint hdc, int mode);
+
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool StretchBlt(
+        nint destDc, int destX, int destY, int destWidth, int destHeight,
+        nint sourceDc, int sourceX, int sourceY, int sourceWidth, int sourceHeight, uint rop);
+
+    [DllImport("gdi32.dll")]
+    public static extern int GetBitmapBits(nint bitmap, int count, byte[] bits);
+
     // ---- Taskbar (ITaskbarList, ADR-0009) -----------------------------------------------
 
     /// <summary>CLSID of the shell's TaskbarList coclass.</summary>
