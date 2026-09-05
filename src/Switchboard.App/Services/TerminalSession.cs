@@ -92,8 +92,14 @@ public sealed class TerminalSession : IDisposable
         _tracker.ForegroundChanged += OnForegroundChanged;
         _tracker.Start();
 
-        var recovered = _tracker.RecoverByTitle(Registry.Terminals.Select(t => t.Name));
-        _log.LogInformation("Recovered {Count} windows from a previous run", recovered);
+        // HWND first: handles survive a manager restart while titles drift; stale handles
+        // fail validation and fall through to the title pass (ADR-0002 amendment).
+        var byHwnd = _tracker.RecoverByHwnd(Registry.Terminals
+            .Select(t => (t.Name, Hwnd: (nint)t.LastHwnd.GetValueOrDefault()))
+            .Where(p => p.Hwnd != 0)
+            .ToList());
+        var byTitle = _tracker.RecoverByTitle(Registry.Terminals.Select(t => t.Name));
+        _log.LogInformation("Recovered {ByHwnd} windows by handle, {ByTitle} by title", byHwnd, byTitle);
         _tracker.ProbeForeground();
         ReapplyTaskbarVisibility();
 
@@ -119,6 +125,45 @@ public sealed class TerminalSession : IDisposable
 
     /// <summary>The bound window's HWND, or 0 when the terminal isn't running. Rail thumbnails key on this.</summary>
     public nint HwndOf(string name) => _tracker.Find(name)?.Hwnd ?? 0;
+
+    /// <summary>
+    /// Windows Terminal windows on the desktop not bound to any registry name. Call only
+    /// when the rail actually needs the list (on open) — this is an EnumWindows scan.
+    /// </summary>
+    public IReadOnlyList<UnboundWindow> UnboundWindows() => _tracker.UnboundWindows();
+
+    /// <summary>
+    /// Registered terminals the rail can offer as an adopt target: not already bound to a
+    /// live window (R7). A closed, persistent terminal is exactly this; a running one isn't.
+    /// </summary>
+    public IReadOnlyList<TerminalDefinition> AdoptableTerminals() =>
+        Registry.Terminals.Where(t => _tracker.Find(t.Name) is null).ToList();
+
+    /// <summary>
+    /// Binds an unbound window to an existing registry name. Never steals focus — this is
+    /// the tracker's manual-bind path, the same one restart recovery uses (ADR-0002).
+    /// </summary>
+    public bool AdoptAsync(string name, nint hwnd)
+    {
+        try
+        {
+            _tracker.Bind(name, hwnd);
+            return true;
+        }
+        catch (ArgumentException ex)
+        {
+            // The window closed between the rail listing it and the click landing.
+            _log.LogWarning(ex, "Adopt failed for '{Name}'", name);
+            return false;
+        }
+    }
+
+    /// <summary>Registers a brand-new definition and binds it to an already-running window in one step.</summary>
+    public async Task<bool> AdoptAsNewAsync(TerminalDefinition def, nint hwnd)
+    {
+        await AddTerminalAsync(def);
+        return AdoptAsync(def.Name, hwnd);
+    }
 
     public TerminalState StateOf(string name) => _status.StateOf(name);
 
@@ -335,11 +380,45 @@ public sealed class TerminalSession : IDisposable
             _taskbar.Hide(tw.Hwnd);
         }
 
+        RememberHwnd(tw);
         _status.WindowAppeared(def);
 
         if (focusRequested)
         {
             WindowFocuser.Focus(tw.Hwnd);
+        }
+    }
+
+    /// <summary>
+    /// Persists the bound HWND so the next manager restart can recover this window even if
+    /// its title has drifted (ADR-0002 amendment). No RegistryChanged: nothing UI-visible
+    /// changed, and firing it would rebuild the strip and rebind hotkeys for nothing.
+    /// </summary>
+    private void RememberHwnd(TrackedWindow tw)
+    {
+        if (Definition(tw.Name) is not { } def || def.LastHwnd == tw.Hwnd)
+        {
+            return;
+        }
+
+        Registry = Registry with
+        {
+            Terminals = Registry.Terminals
+                .Select(t => t.Name == tw.Name ? t with { LastHwnd = tw.Hwnd } : t)
+                .ToList(),
+        };
+        _ = SaveQuietlyAsync();
+    }
+
+    private async Task SaveQuietlyAsync()
+    {
+        try
+        {
+            await PersistAsync();
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Failed to persist last-known window handles");
         }
     }
 
