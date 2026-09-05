@@ -58,6 +58,25 @@ public class StatusEngineTests
     }
 
     [Fact]
+    public void Title_driven_attention_is_sticky_until_focused()
+    {
+        var (engine, time, _) = Make();
+        engine.WindowAppeared(Anvil);
+        engine.TitleChanged(Anvil, "claude — waiting for input");
+        Assert.Equal(TerminalState.Attention, engine.StateOf("anvil"));
+
+        // Later activity — matched or not — and idle decay must not demote it.
+        engine.TitleChanged(Anvil, "npm run build — building");
+        engine.TitleChanged(Anvil, "~/anvil");
+        time.Advance(TimeSpan.FromMinutes(5));
+        engine.Tick();
+        Assert.Equal(TerminalState.Attention, engine.StateOf("anvil"));
+
+        engine.Focused("anvil");
+        Assert.Equal(TerminalState.Idle, engine.StateOf("anvil"));
+    }
+
+    [Fact]
     public void Working_decays_to_idle_after_timeout()
     {
         var (engine, time, _) = Make();
