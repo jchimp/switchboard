@@ -27,6 +27,9 @@ public static class MonitorLayout
                 WorkArea = new PixelRect(
                     info.rcWork.Left, info.rcWork.Top,
                     info.rcWork.Right - info.rcWork.Left, info.rcWork.Bottom - info.rcWork.Top),
+                Bounds = new PixelRect(
+                    info.rcMonitor.Left, info.rcMonitor.Top,
+                    info.rcMonitor.Right - info.rcMonitor.Left, info.rcMonitor.Bottom - info.rcMonitor.Top),
                 DpiScale = scale,
                 IsPrimary = (info.dwFlags & NativeMethods.MONITORINFOF_PRIMARY) != 0,
             });
