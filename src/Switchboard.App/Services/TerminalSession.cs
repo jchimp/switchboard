@@ -26,6 +26,8 @@ public sealed class TerminalSession : IDisposable
     private readonly FrameColorizer _colorizer;
     private readonly TaskbarVisibility _taskbar;
     private readonly RegistryWatcher _watcher;
+    private readonly WindowSampler _sampler;
+    private readonly MotionSampler _motion = new();
     private readonly ILogger<TerminalSession> _log;
     private readonly TimeProvider _time;
     private readonly System.Windows.Threading.Dispatcher _dispatcher;
@@ -38,7 +40,7 @@ public sealed class TerminalSession : IDisposable
     public TerminalSession(
         IRegistryStore store, ITerminalLauncher launcher, WindowTracker tracker,
         FrameColorizer colorizer, TaskbarVisibility taskbar, RegistryWatcher watcher,
-        TimeProvider time, ILogger<TerminalSession> log)
+        WindowSampler sampler, TimeProvider time, ILogger<TerminalSession> log)
     {
         _store = store;
         _launcher = launcher;
@@ -46,12 +48,17 @@ public sealed class TerminalSession : IDisposable
         _colorizer = colorizer;
         _taskbar = taskbar;
         _watcher = watcher;
+        _sampler = sampler;
         _log = log;
         _time = time;
         _dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
         _status = new StatusEngine(time, StatusRule.Defaults);
         _tick = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _tick.Tick += (_, _) => _status.Tick();
+        _tick.Tick += (_, _) =>
+        {
+            _status.Tick();
+            SampleMotion(); // rides the existing 1 s tick — no new timer (ADR-0013)
+        };
     }
 
     public RegistryFile Registry { get; private set; } = RegistryFile.Empty;
@@ -65,6 +72,13 @@ public sealed class TerminalSession : IDisposable
     public event Action<string?>? ForegroundChanged;
 
     public string? ForegroundName => _foregroundName;
+
+    /// <summary>
+    /// When this returns true, motion sampling skips the tick. The composition root wires
+    /// it to "a slide animation is running": PrintWindow costs a few ms on the UI thread
+    /// and would stutter the 16 ms animation frames (ADR-0013).
+    /// </summary>
+    public Func<bool>? MotionSamplingPaused { get; set; }
 
     public async Task InitializeAsync()
     {
@@ -274,6 +288,37 @@ public sealed class TerminalSession : IDisposable
         }
     }
 
+    /// <summary>
+    /// The thumbnail-motion status source (ADR-0013): sample up to three unfocused
+    /// Idle/Working windows this tick; a changed pixel hash means output happened.
+    /// </summary>
+    private void SampleMotion()
+    {
+        if (!Registry.ThumbnailMotionEnabled || MotionSamplingPaused?.Invoke() == true)
+        {
+            return;
+        }
+
+        var eligible = Registry.Terminals
+            .Where(t => _tracker.Find(t.Name) is not null &&
+                        MotionSampler.IsEligible(_status.StateOf(t.Name), t.Name == _foregroundName))
+            .Select(t => t.Name)
+            .ToList();
+
+        foreach (var name in _motion.NextBatch(eligible))
+        {
+            if (_tracker.Find(name) is not { } tw || _sampler.SampleHash(tw.Hwnd) is not { } hash)
+            {
+                continue;
+            }
+
+            if (_motion.Observe(name, hash) && Definition(name) is { } def)
+            {
+                _status.OutputObserved(def);
+            }
+        }
+    }
+
     private void OnWindowAppeared(TrackedWindow tw)
     {
         var focusRequested = _focusOnAppear.Remove(tw.Name, out var deadline)
@@ -317,6 +362,7 @@ public sealed class TerminalSession : IDisposable
     private async void OnWindowClosed(TrackedWindow tw)
     {
         _status.WindowGone(tw.Name);
+        _motion.Forget(tw.Name); // a relaunch under this name starts from a fresh baseline
         if (Definition(tw.Name) is { Persistent: false })
         {
             try
