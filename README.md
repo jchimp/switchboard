@@ -2,8 +2,6 @@
 
 A Windows Terminal switchboard: name your terminals, give each one a color, see at a glance which ones are working or waiting on you, and jump to any of them from anywhere — without six entries in the taskbar.
 
-Built for a day that mixes PowerShell, WSL, Docker, Python, Node, and CLI AI harnesses across 5–10 Windows Terminal windows.
-
 ## What it does
 
 - **Registry** — a `registry.json` of named terminals: profile, shell, working dir, startup command, color, jump key. That file is the whole product state.
