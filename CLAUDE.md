@@ -15,7 +15,7 @@ dotnet run --project src/Switchboard.App
 dotnet format                     # before every commit
 ```
 
-Registry lives at `%APPDATA%\Switchboard\registry.json`. A sample is in `docs/registry.example.json`.
+Registry lives at `%APPDATA%\Switchboard\switchboard.json`. A sample is in `docs/switchboard.example.json`.
 
 ## Architecture in one paragraph
 
