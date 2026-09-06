@@ -83,6 +83,15 @@ public sealed class TerminalSession : IDisposable
     public async Task InitializeAsync()
     {
         Registry = await _store.LoadAsync();
+
+        // The store reads the pre-rename file name once; convert it now rather than at the
+        // next save, so the watcher below has the current file to watch from the first run.
+        if (_store.AdoptedLegacyFile)
+        {
+            await PersistAsync();
+            _log.LogInformation("Adopted the legacy registry file; wrote switchboard.json");
+        }
+
         _status = new StatusEngine(_time, Registry.GlobalStatusRules);
         _status.StateChanged += (name, state) => StateChanged?.Invoke(name, state);
 
@@ -293,7 +302,7 @@ public sealed class TerminalSession : IDisposable
     }
 
     /// <summary>
-    /// Re-reads registry.json and applies adds, removes, and edits to live state (ADR-0008).
+    /// Re-reads switchboard.json and applies adds, removes, and edits to live state (ADR-0008).
     /// A file that fails to load keeps the current in-memory registry — hand-edits are
     /// hostile input and must never take the session down.
     /// </summary>
@@ -306,7 +315,7 @@ public sealed class TerminalSession : IDisposable
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "registry.json changed but did not load; keeping the current registry");
+            _log.LogWarning(ex, "switchboard.json changed but did not load; keeping the current registry");
             return;
         }
 
