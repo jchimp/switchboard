@@ -1,7 +1,7 @@
 namespace Switchboard.Core.Registry;
 
 /// <summary>
-/// Watches registry.json for out-of-band edits (ADR-0008). Events are debounced — editors
+/// Watches switchboard.json for out-of-band edits (ADR-0008). Events are debounced — editors
 /// and our own atomic writes touch the file in bursts — and self-writes are suppressed by
 /// muting around <c>SaveAsync</c>. <see cref="Changed"/> is raised on a timer thread; the
 /// subscriber marshals to the UI thread.
