@@ -71,6 +71,20 @@ public sealed class JsonRegistryStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Last_directory_survives_a_save_and_reload()
+    {
+        var store = new JsonRegistryStore(PathFor("switchboard.json"));
+        await store.SaveAsync(new RegistryFile
+        {
+            QuickLaunch = new QuickLaunchSettings { LastDirectory = @"C:\src" },
+        });
+
+        var loaded = await store.LoadAsync();
+        Assert.Equal(@"C:\src", loaded.QuickLaunch.LastDirectory);
+        Assert.Null(new QuickLaunchSettings().LastDirectory);
+    }
+
+    [Fact]
     public async Task Taskbar_and_auto_hide_settings_round_trip()
     {
         var store = new JsonRegistryStore(PathFor("switchboard.json"));

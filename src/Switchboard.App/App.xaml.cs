@@ -55,6 +55,11 @@ public partial class App : Application
         services.AddSingleton<StripWindow>();
         services.AddSingleton<RailViewModel>();
         services.AddSingleton<Rail.RailWindow>();
+        services.AddSingleton<SwitcherViewModel>();
+        services.AddSingleton<Switcher.SwitcherWindow>();
+        services.AddSingleton<WtProfileProvider>();
+        services.AddSingleton<PickerViewModel>();
+        services.AddSingleton<Picker.PickerWindow>();
         _services = services.BuildServiceProvider();
 
         var log = _services.GetRequiredService<ILogger<App>>();

@@ -82,6 +82,9 @@ public sealed record HotkeySettings
 {
     public string OpenSwitcher { get; init; } = "Ctrl+`";
 
+    /// <summary>Launches straight from the quick-launch defaults, bypassing the picker (ADR-0017).</summary>
+    public string NewTerminalQuiet { get; init; } = "Ctrl+Alt+Shift+N";
+
     public string CycleRecent { get; init; } = "Ctrl+Shift+`";
 
     public string NewTerminal { get; init; } = "Ctrl+Alt+N";
@@ -108,4 +111,10 @@ public sealed record QuickLaunchSettings
     public string NamePrefix { get; init; } = "term-";
 
     public bool PersistByDefault { get; init; } = true;
+
+    /// <summary>
+    /// The directory of the last picker launch; new quick launches start here (R21).
+    /// Written via the quiet-save path — hand-edits win on the next hot-reload.
+    /// </summary>
+    public string? LastDirectory { get; init; }
 }
