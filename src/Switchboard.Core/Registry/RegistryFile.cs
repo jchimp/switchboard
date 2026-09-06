@@ -2,7 +2,7 @@ using Switchboard.Core.Status;
 
 namespace Switchboard.Core.Registry;
 
-/// <summary>Root of <c>registry.json</c>. This file is the whole product state.</summary>
+/// <summary>Root of <c>switchboard.json</c>. This file is the whole product state.</summary>
 public sealed record RegistryFile
 {
     public const int CurrentVersion = 1;
