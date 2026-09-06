@@ -55,7 +55,7 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 - R24. While collapsed, a terminal entering Attention pulses its segment color and slides the strip out to full thickness until that terminal is focused.
 
 ### Hotkeys
-- R16. Global, configurable chords for: new terminal, jump 1–9, jump to attention, cycle recent, reapply colors, open switcher (M3), toggle rail (M2).
+- R16. Global, configurable chords for: new terminal (picker), quiet new terminal (no UI), jump 1–9, jump to attention, cycle recent (MRU walk, ADR-0015), reapply colors, open switcher (ADR-0016), toggle rail (M2).
 - R17. Chords another app already owns are skipped with a logged warning, never a crash.
 
 ### Status
@@ -67,8 +67,8 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 - R25. Optionally (`hideFromTaskbar`, off by default) bound windows' taskbar buttons are removed via `ITaskbarList::DeleteTab` while bound, and restored on unbind, on the flag turning off, and on exit. Unbound windows are never touched. Survives Explorer restarts via the `TaskbarCreated` broadcast. (ADR-0009)
 
 ### New terminal
-- R21. `Ctrl+Alt+N` creates a terminal from the quick-launch defaults: next free `term-N` name, next unused palette hue, default profile, last-used directory (M3). Registered and launched immediately.
-- R22. M3 adds a small picker (profile via Tab, Enter to launch, "keep" toggle).
+- R21. A new terminal comes from the quick-launch defaults: next free `term-N` name, next unused palette hue, default profile, last-used directory (`quickLaunch.lastDirectory`). `Ctrl+Alt+Shift+N` registers and launches immediately with those defaults, no UI (ADR-0017).
+- R22. `Ctrl+Alt+N` opens the picker: profile via Tab (read live from Windows Terminal's settings.json), directory box, "keep" toggle (Ctrl+K), Enter launches, Esc cancels. Opens fully seeded, so a bare Enter equals the quiet launch (ADR-0017).
 
 ## Non-functional
 
