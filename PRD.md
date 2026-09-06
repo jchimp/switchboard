@@ -30,7 +30,7 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 ## Functional requirements
 
 ### Registry
-- R1. Terminals are defined in `%APPDATA%\Switchboard\registry.json`: name, tag, color, WT profile, shell kind, distro, working dir, startup command, jump key, status rules, persistent flag.
+- R1. Terminals are defined in `%APPDATA%\Switchboard\switchboard.json`: name, tag, color, WT profile, shell kind, distro, working dir, startup command, jump key, status rules, persistent flag.
 - R2. Names are unique slugs and are used verbatim as the `wt -w` window name and initial title.
 - R3. Writes are atomic and keep one backup.
 - R4. Unknown or newer schema versions fail loudly; older versions migrate.
