@@ -12,7 +12,7 @@ public sealed class JsonRegistryStoreTests : IDisposable
     [Fact]
     public async Task Missing_file_loads_as_empty()
     {
-        var store = new JsonRegistryStore(PathFor("registry.json"));
+        var store = new JsonRegistryStore(PathFor("switchboard.json"));
         var file = await store.LoadAsync();
         Assert.Empty(file.Terminals);
         Assert.Equal(RegistryFile.CurrentVersion, file.Version);
@@ -21,7 +21,7 @@ public sealed class JsonRegistryStoreTests : IDisposable
     [Fact]
     public async Task Round_trips_and_keeps_a_backup()
     {
-        var store = new JsonRegistryStore(PathFor("registry.json"));
+        var store = new JsonRegistryStore(PathFor("switchboard.json"));
         var first = new RegistryFile
         {
             Terminals = [new TerminalDefinition { Name = "anvil", Color = "#B07CF5", Profile = "Ubuntu", Shell = ShellKind.Wsl, Distro = "Ubuntu", JumpKey = 1 }],
@@ -33,14 +33,14 @@ public sealed class JsonRegistryStoreTests : IDisposable
         var loaded = await store.LoadAsync();
         Assert.Equal(2, loaded.Terminals.Count);
         Assert.Equal(ShellKind.Wsl, loaded.Terminals[0].Shell);
-        Assert.True(File.Exists(PathFor("registry.json.bak")));
-        Assert.False(File.Exists(PathFor("registry.json.tmp")));
+        Assert.True(File.Exists(PathFor("switchboard.json.bak")));
+        Assert.False(File.Exists(PathFor("switchboard.json.tmp")));
     }
 
     [Fact]
     public async Task Old_files_without_new_settings_load_with_defaults()
     {
-        var path = PathFor("registry.json");
+        var path = PathFor("switchboard.json");
         Directory.CreateDirectory(_dir);
         await File.WriteAllTextAsync(path, """
             { "version": 1, "strip": { "edge": "top", "thickness": 8 }, "terminals": [] }
@@ -59,7 +59,7 @@ public sealed class JsonRegistryStoreTests : IDisposable
     [Fact]
     public async Task Last_hwnd_round_trips_and_defaults_to_null()
     {
-        var store = new JsonRegistryStore(PathFor("registry.json"));
+        var store = new JsonRegistryStore(PathFor("switchboard.json"));
         await store.SaveAsync(new RegistryFile
         {
             Terminals = [new TerminalDefinition { Name = "anvil", Color = "#B07CF5", Profile = "Ubuntu", LastHwnd = 0x1234 }],
@@ -73,7 +73,7 @@ public sealed class JsonRegistryStoreTests : IDisposable
     [Fact]
     public async Task Taskbar_and_auto_hide_settings_round_trip()
     {
-        var store = new JsonRegistryStore(PathFor("registry.json"));
+        var store = new JsonRegistryStore(PathFor("switchboard.json"));
         await store.SaveAsync(new RegistryFile
         {
             HideFromTaskbar = true,
@@ -88,9 +88,62 @@ public sealed class JsonRegistryStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Legacy_registry_file_is_adopted_when_the_new_name_is_absent()
+    {
+        Directory.CreateDirectory(_dir);
+        await File.WriteAllTextAsync(PathFor("registry.json"), """
+            { "version": 1, "terminals": [ { "name": "anvil", "color": "#B07CF5", "profile": "Ubuntu" } ] }
+            """);
+
+        var store = new JsonRegistryStore(PathFor("switchboard.json"), PathFor("registry.json"));
+        var loaded = await store.LoadAsync();
+
+        Assert.Equal("anvil", Assert.Single(loaded.Terminals).Name);
+        Assert.True(store.AdoptedLegacyFile);
+    }
+
+    [Fact]
+    public async Task Saving_after_adoption_writes_the_new_name_and_leaves_the_old_file()
+    {
+        Directory.CreateDirectory(_dir);
+        await File.WriteAllTextAsync(PathFor("registry.json"), """
+            { "version": 1, "terminals": [ { "name": "anvil", "color": "#B07CF5", "profile": "Ubuntu" } ] }
+            """);
+
+        var store = new JsonRegistryStore(PathFor("switchboard.json"), PathFor("registry.json"));
+        await store.SaveAsync(await store.LoadAsync());
+
+        Assert.True(File.Exists(PathFor("switchboard.json")));
+        Assert.True(File.Exists(PathFor("registry.json")));
+        Assert.False(store.AdoptedLegacyFile);
+
+        var reopened = new JsonRegistryStore(PathFor("switchboard.json"), PathFor("registry.json"));
+        Assert.Equal("anvil", Assert.Single((await reopened.LoadAsync()).Terminals).Name);
+        Assert.False(reopened.AdoptedLegacyFile);
+    }
+
+    [Fact]
+    public async Task The_new_file_wins_when_both_exist()
+    {
+        Directory.CreateDirectory(_dir);
+        await File.WriteAllTextAsync(PathFor("registry.json"), """
+            { "version": 1, "terminals": [ { "name": "old", "color": "#000000", "profile": "p" } ] }
+            """);
+        await File.WriteAllTextAsync(PathFor("switchboard.json"), """
+            { "version": 1, "terminals": [ { "name": "new", "color": "#000000", "profile": "p" } ] }
+            """);
+
+        var store = new JsonRegistryStore(PathFor("switchboard.json"), PathFor("registry.json"));
+        var loaded = await store.LoadAsync();
+
+        Assert.Equal("new", Assert.Single(loaded.Terminals).Name);
+        Assert.False(store.AdoptedLegacyFile);
+    }
+
+    [Fact]
     public async Task Rejects_duplicate_names()
     {
-        var path = PathFor("registry.json");
+        var path = PathFor("switchboard.json");
         Directory.CreateDirectory(_dir);
         await File.WriteAllTextAsync(path, """
             { "version": 1, "terminals": [
@@ -104,7 +157,7 @@ public sealed class JsonRegistryStoreTests : IDisposable
     [Fact]
     public async Task Rejects_future_versions()
     {
-        var path = PathFor("registry.json");
+        var path = PathFor("switchboard.json");
         Directory.CreateDirectory(_dir);
         await File.WriteAllTextAsync(path, """{ "version": 99, "terminals": [] }""");
 
