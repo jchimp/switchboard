@@ -39,8 +39,8 @@ public partial class App : Application
         var services = new ServiceCollection();
         services.AddLogging(b => b.AddDebug().AddProvider(new FileLoggerProvider(logDir)).SetMinimumLevel(LogLevel.Debug));
         services.AddSingleton(TimeProvider.System);
-        services.AddSingleton<IRegistryStore>(_ => new JsonRegistryStore(JsonRegistryStore.DefaultPath));
-        services.AddSingleton(sp => new RegistryWatcher(JsonRegistryStore.DefaultPath, sp.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<IRegistryStore>(_ => new JsonRegistryStore(RegistryPaths.Default, RegistryPaths.Legacy));
+        services.AddSingleton(sp => new RegistryWatcher(RegistryPaths.Default, sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<ITerminalLauncher, ProcessTerminalLauncher>();
         services.AddSingleton<FrameColorizer>();
         services.AddSingleton<TaskbarVisibility>();
