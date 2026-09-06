@@ -4,8 +4,9 @@ using System.Text.Json.Serialization;
 namespace Switchboard.Core.Registry;
 
 /// <summary>
-/// JSON-on-disk registry with atomic writes. Default location is
-/// <c>%APPDATA%\Switchboard\registry.json</c>; tests pass a temp path.
+/// JSON-on-disk registry with atomic writes. The store knows nothing about where the file
+/// lives: the composition root supplies the path (<c>RegistryPaths</c> in the app, a temp
+/// path in tests), so Core stays platform-neutral (invariant 1).
 /// </summary>
 public sealed class JsonRegistryStore : IRegistryStore
 {
@@ -21,26 +22,36 @@ public sealed class JsonRegistryStore : IRegistryStore
 
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    public JsonRegistryStore(string path)
+    /// <param name="path">Where the registry is read from and always written to.</param>
+    /// <param name="legacyPath">
+    /// An older file name to fall back to for reading when <paramref name="path"/> does not
+    /// exist yet. Injected rather than hard-coded so Core stays platform-neutral.
+    /// </param>
+    public JsonRegistryStore(string path, string? legacyPath = null)
     {
         FilePath = path ?? throw new ArgumentNullException(nameof(path));
+        LegacyPath = legacyPath;
     }
-
-    public static string DefaultPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Switchboard", "registry.json");
 
     public string FilePath { get; }
 
+    public string? LegacyPath { get; }
+
+    public bool AdoptedLegacyFile { get; private set; }
+
     public async Task<RegistryFile> LoadAsync(CancellationToken ct = default)
     {
-        if (!File.Exists(FilePath))
+        var source = ResolveLoadPath();
+        if (source is null)
         {
             return RegistryFile.Empty;
         }
 
-        await using var stream = File.OpenRead(FilePath);
+        AdoptedLegacyFile = source != FilePath;
+
+        await using var stream = File.OpenRead(source);
         var file = await JsonSerializer.DeserializeAsync<RegistryFile>(stream, Options, ct)
-                   ?? throw new InvalidDataException($"Registry at '{FilePath}' deserialised to null.");
+                   ?? throw new InvalidDataException($"Registry at '{source}' deserialised to null.");
 
         if (file.Version > RegistryFile.CurrentVersion)
         {
@@ -61,6 +72,17 @@ public sealed class JsonRegistryStore : IRegistryStore
         }
 
         return Migrate(file);
+    }
+
+    /// <summary>The file to read: the current name if present, else the legacy one, else nothing.</summary>
+    private string? ResolveLoadPath()
+    {
+        if (File.Exists(FilePath))
+        {
+            return FilePath;
+        }
+
+        return LegacyPath is not null && File.Exists(LegacyPath) ? LegacyPath : null;
     }
 
     public async Task SaveAsync(RegistryFile file, CancellationToken ct = default)
@@ -86,6 +108,7 @@ public sealed class JsonRegistryStore : IRegistryStore
             }
 
             File.Move(tmp, FilePath, overwrite: true);
+            AdoptedLegacyFile = false;
         }
         finally
         {
