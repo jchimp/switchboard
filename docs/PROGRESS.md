@@ -1,7 +1,7 @@
 # Project Progress
 
 ## Current Focus
-M2 code-complete; rail card restyle (stacked, larger thumbnails) on branch `rail-stacked-thumbs` awaiting Jeremy's visual check. Remaining for M2 exit: manual verification of Slices 4 and 6, the measured motion-sampling CPU number for ADR-0013, and daily use.
+M2 code-complete; rail card restyle (stacked, larger thumbnails) and the `registry.json` → `switchboard.json` rename both sit on branch `rail-stacked-thumbs` awaiting Jeremy — a visual check for the rail, a restart for the rename. Remaining for M2 exit: manual verification of Slices 4 and 6, the measured motion-sampling CPU number for ADR-0013, and daily use.
 
 ## M2 Slices
 - [x] Slice 1: app-bar mode (`reserveScreenSpace`) + hide over fullscreen — ADR-0011; verified by Jeremy
@@ -31,9 +31,19 @@ M2 code-complete; rail card restyle (stacked, larger thumbnails) on branch `rail
 - [ ] M1 exit: run daily for a week; tune status rules against real WT titles
 - [x] Verify Attention fires within 2 s for an AI harness waiting on input (PRD success criterion)
 - [ ] Visual check of `rail-stacked-thumbs` branch (both edges), then merge to main
-- [ ] Update `railTopHeightDips` 150 → 190 in the live registry.json (old value clips the top-edge cards)
+- [ ] Update `railTopHeightDips` 150 → 190 in the live switchboard.json (old value clips the top-edge cards)
+- [x] Rename `registry.json` → `switchboard.json`, with a one-time read-fallback to the old name
+- [ ] Manual verify the rename: restart Switchboard with the old file in place — same terminals, `switchboard.json` appears beside an untouched `registry.json`, hot-reload still fires on a hand-edit
 
 ## Progress Log
+
+### 2026-09-06
+- Registry file renamed `registry.json` → `switchboard.json` (JPC-TODO). Filename only: "registry" stays the product word, so `IRegistryStore`, `RegistryFile`, `RegistryWatcher` and the Core namespace are untouched.
+- Existing configs are adopted, not stranded: the store reads the old name when the new one is absent, and `TerminalSession.InitializeAsync` writes the new file immediately rather than at the next save — otherwise the watcher would sit on a file that doesn't exist yet. Old file left in place as a de facto backup. ADR-0008 amended.
+- `%APPDATA%` moved out of Core into a new App-side `RegistryPaths`, so `JsonRegistryStore` now takes only strings — invariant 1 was being broken by the old `DefaultPath` static.
+- 88/88 tests (3 new: adoption, save-after-adoption keeps the old file, new file wins when both exist). Docs, PRD, README, ADR-0008 and `docs/switchboard.example.json` renamed to match.
+- Not verified on hardware: Switchboard was running and holding the build output, so the App was compiled to a scratch dir to prove it builds. Needs a restart to exercise the real adoption path.
+- Next: unchanged — the standing Slice 4/6 verifications and the rail-stacked-thumbs visual check.
 
 ### 2026-09-05
 - Rail card restyle on branch `rail-stacked-thumbs` (dbfe346): stacked layout — name/badge/pencil under a full-width 204×115 thumbnail (was 76×46 side-by-side), 16:9 so DWM stops letterboxing; "Terminals" header row removed.
