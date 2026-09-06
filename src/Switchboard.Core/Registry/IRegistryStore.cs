@@ -7,4 +7,10 @@ public interface IRegistryStore
 
     /// <summary>Atomically replaces the registry on disk, keeping one <c>.bak</c>.</summary>
     Task SaveAsync(RegistryFile file, CancellationToken ct = default);
+
+    /// <summary>
+    /// True when the last load fell back to a legacy file name because the current one was
+    /// absent. Cleared by the next save, which always writes the current name.
+    /// </summary>
+    bool AdoptedLegacyFile { get; }
 }
