@@ -19,7 +19,15 @@ namespace Switchboard.App.Rail;
 /// </summary>
 public partial class RailWindow : Window, IDisposable
 {
+    /// <summary>Card width in DIPs; the XAML card template binds to this so the two can't drift.</summary>
+    public const double CardWidthDips = 216;
+
     private const int SlideDurationMs = 220;
+
+    // Chrome around the top-edge card row, in DIPs: the foot column ApplyOrientation docks
+    // right, the ListScroller's 8+8 padding, and the window border (1 each side).
+    private const double FootColumnWidthDips = 250;
+    private const double TopEdgeChromeDips = 16 + 2;
 
     private readonly RailViewModel _vm;
     private readonly TerminalSession _session;
@@ -72,7 +80,13 @@ public partial class RailWindow : Window, IDisposable
         // liveness (a terminal opening/closing). Cheap when the rail is hidden — all these
         // no-op unless IsOpen.
         _vm.Items.CollectionChanged += (_, _) =>
-            Dispatcher.BeginInvoke(SyncThumbnails, System.Windows.Threading.DispatcherPriority.Background);
+            Dispatcher.BeginInvoke(
+                () =>
+                {
+                    ResizeToContent(); // the top rail's width follows the card count
+                    SyncThumbnails();
+                },
+                System.Windows.Threading.DispatcherPriority.Background);
         _session.StateChanged += (_, _) => SyncThumbnails();
         SizeChanged += (_, _) => SyncThumbnails();
     }
@@ -109,27 +123,19 @@ public partial class RailWindow : Window, IDisposable
             return;
         }
 
-        var monitors = MonitorLayout.Snapshot();
-        if (monitors.Count == 0)
+        _vm.Sync(); // events keep it fresh, but a cheap resync on open is bulletproof
+        _vm.RefreshUnbound(); // R7: the one EnumWindows-shaped scan, run only on open
+
+        // After Sync: the top rail's width follows the card count.
+        if (ComputeRects() is not { } rects)
         {
             return;
         }
 
-        var s = _vm.Settings;
-        var vertical = RailPlacement.IsVertical(s.Edge);
-        var size = vertical ? s.RailSizeDips : s.RailTopHeightDips;
-        var monitor = StripPlacement.SelectMonitor(monitors, s.Monitor);
+        var (open, hidden) = rects;
 
-        // Zero strip offset: the rail anchors at the screen edge and covers the strip while
-        // open (Concept A, ADR-0012 as amended) — its geometry never depends on whether the
-        // strip is currently a sliver, full, or attention-expanded.
-        var open = RailPlacement.Compute(monitor, s.Edge, 0, size);
-        var hidden = RailPlacement.ComputeHidden(monitor, s.Edge, 0, size);
-
+        var vertical = RailPlacement.IsVertical(_vm.Settings.Edge);
         ApplyOrientation(vertical);
-
-        _vm.Sync(); // events keep it fresh, but a cheap resync on open is bulletproof
-        _vm.RefreshUnbound(); // R7: the one EnumWindows-shaped scan, run only on open
         _tracksHover = trackHover;
         IsOpen = true;
         _hoverProbe.Start();
@@ -204,21 +210,55 @@ public partial class RailWindow : Window, IDisposable
         // section alone would squeeze the card list to nothing. Concept A rotates the foot
         // into a right-hand column there.
         DockPanel.SetDock(FootSection, vertical ? Dock.Bottom : Dock.Right);
-        FootSection.Width = vertical ? double.NaN : 250;
+        FootSection.Width = vertical ? double.NaN : FootColumnWidthDips;
     }
 
-    private PixelRect ReverseTarget()
+    private PixelRect ReverseTarget() =>
+        ComputeRects() is { } rects ? rects.Hidden : _slide.Current ?? _openTarget;
+
+    /// <summary>
+    /// The open/hidden rect pair for the current settings and card count; null during a
+    /// session transition with no monitors. Zero strip offset: the rail anchors at the
+    /// screen edge and covers the strip while open (Concept A, ADR-0012 as amended) — its
+    /// geometry never depends on whether the strip is a sliver, full, or attention-expanded.
+    /// </summary>
+    private (PixelRect Open, PixelRect Hidden)? ComputeRects()
     {
         var monitors = MonitorLayout.Snapshot();
-        var s = _vm.Settings;
         if (monitors.Count == 0)
         {
-            return _slide.Current ?? _openTarget;
+            return null;
         }
 
+        var s = _vm.Settings;
         var vertical = RailPlacement.IsVertical(s.Edge);
         var size = vertical ? s.RailSizeDips : s.RailTopHeightDips;
-        return RailPlacement.ComputeHidden(StripPlacement.SelectMonitor(monitors, s.Monitor), s.Edge, 0, size);
+
+        // The top drop-down hugs its content and centers (ADR-0012 as amended); side rails
+        // stay full-height, so no content length there.
+        int? length = vertical
+            ? null
+            : (int)Math.Ceiling(_vm.Items.Count * CardWidthDips + FootColumnWidthDips + TopEdgeChromeDips);
+        var monitor = StripPlacement.SelectMonitor(monitors, s.Monitor);
+        return (
+            RailPlacement.Compute(monitor, s.Edge, 0, size, length),
+            RailPlacement.ComputeHidden(monitor, s.Edge, 0, size, length));
+    }
+
+    /// <summary>Re-fits an open top rail after the card count changes (adopt, new, close).</summary>
+    private void ResizeToContent()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (!IsOpen || hwnd == 0 || _slide.IsRunning || RailPlacement.IsVertical(_vm.Settings.Edge))
+        {
+            return; // a mid-slide change self-corrects on the next open
+        }
+
+        if (ComputeRects() is { } rects && rects.Open != _openTarget)
+        {
+            _openTarget = rects.Open;
+            WindowPlacer.MoveWithoutActivating(hwnd, rects.Open);
+        }
     }
 
     private void ListScroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
