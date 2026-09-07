@@ -26,14 +26,11 @@ public partial class StripWindow : Window
     private readonly RailWindow _rail;
     private readonly System.Windows.Threading.DispatcherTimer _redockDebounce;
     private readonly System.Windows.Threading.DispatcherTimer _collapseTimer;
-    private readonly System.Windows.Threading.DispatcherTimer _slideTimer;
+    private readonly WindowSlide _slide;
     private readonly System.Windows.Threading.DispatcherTimer _hoverOpenTimer;
     private bool _collapsed;
     private bool _fullscreenHidden;
     private PixelRect? _currentRect;
-    private PixelRect _slideFrom;
-    private PixelRect _slideTo;
-    private long _slideStartTicks;
 
     public StripWindow(
         StripViewModel vm, TaskbarVisibility taskbarVisibility, AppBar appBar,
@@ -91,8 +88,13 @@ public partial class StripWindow : Window
             }
         };
 
-        _slideTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-        _slideTimer.Tick += (_, _) => SlideStep();
+        // Frame-synced slide (CompositionTarget.Rendering) — a Background-priority timer
+        // jitters whenever layout or render work competes with it. The strip's slide
+        // changes thickness, so each frame both moves and resizes; _currentRect tracks
+        // every applied frame so a mid-slide re-dock animates from the true position.
+        _slide = new WindowSlide(
+            () => new WindowInteropHelper(this).Handle, SlideDurationMs,
+            applied: rect => _currentRect = rect);
 
         // The strip counts as "inside" for the rail's close probe: hovering the strip with
         // the rail open must not close it (and the open slide passes under the cursor).
@@ -304,7 +306,7 @@ public partial class StripWindow : Window
             // shell grants; the work area would include our own band and drift (ADR-0011).
             var granted = _appBar.Apply(
                 hwnd, s.Edge, StripPlacement.ComputeAppBar(monitor, s.Edge, s.Thickness));
-            _slideTimer.Stop();
+            _slide.Stop();
             Apply(hwnd, granted ?? StripPlacement.Compute(monitor, s.Edge, s.Thickness));
             return;
         }
@@ -315,42 +317,14 @@ public partial class StripWindow : Window
 
         if (animate && _currentRect is { } from && from != rect)
         {
-            _slideFrom = from;
-            _slideTo = rect;
-            _slideStartTicks = Environment.TickCount64;
-            _slideTimer.Start();
+            _slide.Start(from, rect);
         }
         else
         {
-            _slideTimer.Stop();
+            _slide.Stop();
             Apply(hwnd, rect);
         }
     }
-
-    private void SlideStep()
-    {
-        var hwnd = new WindowInteropHelper(this).Handle;
-        if (hwnd == 0)
-        {
-            _slideTimer.Stop();
-            return;
-        }
-
-        var t = Math.Clamp((Environment.TickCount64 - _slideStartTicks) / (double)SlideDurationMs, 0.0, 1.0);
-        var eased = 1 - Math.Pow(1 - t, 3); // ease-out cubic
-        Apply(hwnd, new PixelRect(
-            Lerp(_slideFrom.X, _slideTo.X, eased),
-            Lerp(_slideFrom.Y, _slideTo.Y, eased),
-            Lerp(_slideFrom.Width, _slideTo.Width, eased),
-            Lerp(_slideFrom.Height, _slideTo.Height, eased)));
-
-        if (t >= 1.0)
-        {
-            _slideTimer.Stop();
-        }
-    }
-
-    private static int Lerp(int from, int to, double t) => from + (int)Math.Round((to - from) * t);
 
     private void Apply(nint hwnd, PixelRect rect)
     {

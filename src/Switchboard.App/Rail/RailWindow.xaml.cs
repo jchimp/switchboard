@@ -25,12 +25,9 @@ public partial class RailWindow : Window, IDisposable
     private readonly TerminalSession _session;
     private readonly ILogger<WindowThumbnail> _thumbLog;
     private readonly Dictionary<string, WindowThumbnail> _thumbnails = new(StringComparer.Ordinal);
-    private readonly System.Windows.Threading.DispatcherTimer _slideTimer;
+    private readonly WindowSlide _slide;
     private readonly System.Windows.Threading.DispatcherTimer _hoverProbe;
-    private PixelRect _slideFrom;
-    private PixelRect _slideTo;
-    private long _slideStartTicks;
-    private bool _hidingAfterSlide;
+    private PixelRect _openTarget;
     private bool _tracksHover;
     private bool _menuOpen;
 
@@ -47,8 +44,9 @@ public partial class RailWindow : Window, IDisposable
             WindowStyler.MakeNonActivatingToolWindow(new WindowInteropHelper(this).Handle);
         };
 
-        _slideTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-        _slideTimer.Tick += (_, _) => SlideStep();
+        // Frame-synced slide (CompositionTarget.Rendering): a Background-priority timer is
+        // starved by the very layout/thumbnail work the opening slide triggers.
+        _slide = new WindowSlide(() => new WindowInteropHelper(this).Handle, SlideDurationMs);
 
         // Closing is level-triggered, not edge-triggered: the rail slides under the cursor
         // while opening, so raw MouseLeave fires spuriously mid-slide (the hover bounce).
@@ -82,7 +80,7 @@ public partial class RailWindow : Window, IDisposable
     public bool IsOpen { get; private set; }
 
     /// <summary>True while the open/close slide is animating; motion sampling yields to it.</summary>
-    public bool IsSliding => _slideTimer.IsEnabled;
+    public bool IsSliding => _slide.IsRunning;
 
     /// <summary>The strip listens: while the rail is open the auto-hidden strip stays out.</summary>
     public event Action<bool>? OpenChanged;
@@ -132,7 +130,6 @@ public partial class RailWindow : Window, IDisposable
 
         _vm.Sync(); // events keep it fresh, but a cheap resync on open is bulletproof
         _vm.RefreshUnbound(); // R7: the one EnumWindows-shaped scan, run only on open
-        _hidingAfterSlide = false;
         _tracksHover = trackHover;
         IsOpen = true;
         _hoverProbe.Start();
@@ -148,7 +145,11 @@ public partial class RailWindow : Window, IDisposable
         WindowPlacer.MoveWithoutActivating(helper.Handle, hidden);
         Show();
         WindowPlacer.MoveWithoutActivating(helper.Handle, hidden);
-        Slide(hidden, open);
+        _openTarget = open;
+
+        // Re-opening mid-close reverses from wherever the close got to — no snap.
+        _slide.Start(_slide.IsRunning && _slide.Current is { } current ? current : hidden, open,
+            completed: SyncThumbnails); // rows are laid out, positions are final
 
         // After the first layout pass: re-apply orientation (the ItemsPanel doesn't exist
         // until the window has rendered once, so the pre-Show attempt found no panel on the
@@ -173,8 +174,13 @@ public partial class RailWindow : Window, IDisposable
 
         IsOpen = false;
         _hoverProbe.Stop();
-        _hidingAfterSlide = true;
-        Slide(_slideTo, ReverseTarget());
+
+        // Closing mid-open reverses from the actual current rect, not the full-open target.
+        _slide.Start(_slide.Current ?? _openTarget, ReverseTarget(), completed: () =>
+        {
+            UnregisterAllThumbnails(); // the destination window is going invisible
+            Hide();
+        });
         OpenChanged?.Invoke(false);
     }
 
@@ -207,53 +213,12 @@ public partial class RailWindow : Window, IDisposable
         var s = _vm.Settings;
         if (monitors.Count == 0)
         {
-            return _slideFrom;
+            return _slide.Current ?? _openTarget;
         }
 
         var vertical = RailPlacement.IsVertical(s.Edge);
         var size = vertical ? s.RailSizeDips : s.RailTopHeightDips;
         return RailPlacement.ComputeHidden(StripPlacement.SelectMonitor(monitors, s.Monitor), s.Edge, 0, size);
-    }
-
-    private void Slide(PixelRect from, PixelRect to)
-    {
-        _slideFrom = from;
-        _slideTo = to;
-        _slideStartTicks = Environment.TickCount64;
-        _slideTimer.Start();
-    }
-
-    private void SlideStep()
-    {
-        var hwnd = new WindowInteropHelper(this).Handle;
-        if (hwnd == 0)
-        {
-            _slideTimer.Stop();
-            return;
-        }
-
-        var t = Math.Clamp((Environment.TickCount64 - _slideStartTicks) / (double)SlideDurationMs, 0.0, 1.0);
-        var eased = 1 - Math.Pow(1 - t, 3); // ease-out cubic, same feel as the strip
-        WindowPlacer.MoveWithoutActivating(hwnd, new PixelRect(
-            Lerp(_slideFrom.X, _slideTo.X, eased),
-            Lerp(_slideFrom.Y, _slideTo.Y, eased),
-            Lerp(_slideFrom.Width, _slideTo.Width, eased),
-            Lerp(_slideFrom.Height, _slideTo.Height, eased)));
-
-        if (t >= 1.0)
-        {
-            _slideTimer.Stop();
-            if (_hidingAfterSlide)
-            {
-                _hidingAfterSlide = false;
-                UnregisterAllThumbnails(); // the destination window is going invisible
-                Hide();
-            }
-            else
-            {
-                SyncThumbnails(); // open slide finished; rows are laid out, positions are final
-            }
-        }
     }
 
     private void ListScroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -348,8 +313,6 @@ public partial class RailWindow : Window, IDisposable
     }
 
     public void Dispose() => UnregisterAllThumbnails();
-
-    private static int Lerp(int from, int to, double t) => from + (int)Math.Round((to - from) * t);
 
     private StackPanel? FindPanel() => FindVisualChild<StackPanel>(Rows);
 
