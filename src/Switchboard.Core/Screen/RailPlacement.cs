@@ -4,8 +4,9 @@ namespace Switchboard.Core.Screen;
 
 /// <summary>
 /// Where the rail goes: a band adjacent to the strip on the same edge — a vertical panel
-/// for left/right, a full-width drop-down for top (ADR-0012). Pure math like
-/// <see cref="StripPlacement"/>; the App layer applies the result via SetWindowPos.
+/// for left/right, a centered content-width drop-down for top (ADR-0012 as amended).
+/// Pure math like <see cref="StripPlacement"/>; the App layer applies the result via
+/// SetWindowPos.
 /// </summary>
 public static class RailPlacement
 {
@@ -14,19 +15,26 @@ public static class RailPlacement
     /// <summary>
     /// The rail's rect on <paramref name="monitor"/>, sitting flush against the strip so
     /// the cursor can travel strip → rail without a gap. Sizes are in DIPs.
+    /// For the top edge, <paramref name="contentLengthDips"/> sizes the drop-down to its
+    /// content and centers it in the work area; null spans the full width. Left/right
+    /// rails are full-height regardless.
     /// </summary>
     public static PixelRect Compute(
-        MonitorBounds monitor, ScreenEdge edge, int stripThicknessDips, int railSizeDips)
+        MonitorBounds monitor, ScreenEdge edge, int stripThicknessDips, int railSizeDips,
+        int? contentLengthDips = null)
     {
         var wa = monitor.WorkArea;
         // A zero offset is meaningful: the rail anchors at the screen edge, covering the strip.
         var strip = Math.Max(0, (int)Math.Round(stripThicknessDips * monitor.DpiScale));
         var rail = Math.Max(1, (int)Math.Round(railSizeDips * monitor.DpiScale));
+        var width = contentLengthDips is { } content
+            ? Math.Clamp((int)Math.Round(content * monitor.DpiScale), 1, wa.Width)
+            : wa.Width;
         return edge switch
         {
             ScreenEdge.Left => new PixelRect(wa.X + strip, wa.Y, rail, wa.Height),
             ScreenEdge.Right => new PixelRect(wa.X + wa.Width - strip - rail, wa.Y, rail, wa.Height),
-            _ => new PixelRect(wa.X, wa.Y + strip, wa.Width, rail),
+            _ => new PixelRect(wa.X + (wa.Width - width) / 2, wa.Y + strip, width, rail),
         };
     }
 
@@ -35,9 +43,10 @@ public static class RailPlacement
     /// entirely behind the screen edge, under the strip.
     /// </summary>
     public static PixelRect ComputeHidden(
-        MonitorBounds monitor, ScreenEdge edge, int stripThicknessDips, int railSizeDips)
+        MonitorBounds monitor, ScreenEdge edge, int stripThicknessDips, int railSizeDips,
+        int? contentLengthDips = null)
     {
-        var open = Compute(monitor, edge, stripThicknessDips, railSizeDips);
+        var open = Compute(monitor, edge, stripThicknessDips, railSizeDips, contentLengthDips);
         return edge switch
         {
             ScreenEdge.Left => open with { X = open.X - open.Width },
