@@ -33,6 +33,14 @@ failure the strip's invariant 7 exists to prevent. But M2 also promises inline r
   it. `RailPlacement` takes an optional content length (DIPs); the App layer derives it from
   the card count on each open and re-fits an open rail when cards are added or removed.
   Left/right rails are unchanged (full-height, fixed `railSizeDips`).
+- *(Amended 2026-09-06)* That width is a setting, `strip.topWidth`: `full` (span the work
+  area) or `centered` (default). **The strip follows the same setting**, so the color bar
+  and the slide-down tray are always the same width and position — `StripPlacement.Compute`
+  takes the same optional content length, and `RailMetrics` owns the one formula both
+  windows call. Two consequences: the width comes from the registry's terminal count, not
+  the strip's visible segments, because `showClosedTerminals` can hide segments the rail
+  still lists; and app-bar mode (`reserveScreenSpace`) stays full-width regardless, since a
+  reserved band spans the whole edge by nature (ADR-0011).
 - *(Amended 2026-09-04)* The rail anchors at the **screen edge and covers the strip while
   open** — exactly the Concept A mockup. Its geometry never depends on the strip's current
   thickness (sliver, full, or attention-expanded), the strip needs no held-open state while
