@@ -77,21 +77,23 @@
   .rail{position:absolute;left:0;top:0;bottom:34px;width:236px;background:rgba(18,20,26,.94);backdrop-filter:blur(10px);z-index:6;
         transform:translateX(-100%);transition:transform .22s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;border-right:1px solid #2c3140}
   .rail.open{transform:none}
-  .rail .head{padding:10px 12px 6px;color:#9aa3b2;font-size:11px;display:flex;justify-content:space-between}
-  .rail .head b{color:#e6e8ec;font-weight:600}
-  .rail .list{flex:1;overflow:auto;padding:0 8px 8px;display:flex;flex-direction:column;gap:6px}
-  .card{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px;border-radius:6px;border:1px solid transparent;cursor:pointer;background:transparent}
+  /* No header row: thumbnails start at the top of the rail (gutter reclaimed). */
+  .rail .list{flex:1;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:6px}
+  /* Stacked card, both orientations: 16:9 thumb (204x115 in the 236 rail) with the meta
+     row beneath. The key badge lives in the name row, not over the thumb — DWM composites
+     live thumbnails above the app's own visuals, so nothing may overlay the thumb slot. */
+  .card{display:grid;grid-template-columns:1fr;grid-template-rows:auto auto;gap:5px;padding:6px;border-radius:6px;border:1px solid transparent;cursor:pointer;background:transparent}
   .card:hover{background:rgba(255,255,255,.05)}
   .card.on{border-color:var(--c);background:rgba(255,255,255,.04)}
-  .card .thumb{width:76px;height:46px;border-radius:3px;background:#101010;border-left:3px solid var(--c);overflow:hidden;padding:4px 5px;display:flex;flex-direction:column;gap:3px}
+  .card .thumb{width:100%;height:115px;border-radius:3px;background:#101010;overflow:hidden;padding:6px 7px;display:flex;flex-direction:column;gap:5px}
   .card .thumb i{display:block;height:3px;border-radius:2px;background:#3a3a3a}
   .card .thumb i:first-child{background:var(--c);width:60%}
   .card .thumb i:nth-child(3){width:80%}.card .thumb i:nth-child(4){width:45%}
   .card .meta{min-width:0}
   .card .name{font-size:12.5px;color:#f1f3f6;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .card .name::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
-  .card .sub{font:11px var(--mono);color:#8b93a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .card .key{font:11px var(--mono);color:#8b93a3;border:1px solid #384056;border-radius:4px;padding:1px 5px}
+  .card .sub{font:11px var(--mono);color:#8b93a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-left:14px}
+  .card .key{font:11px var(--mono);color:#8b93a3;border:1px solid #384056;border-radius:4px;padding:1px 5px;margin-left:auto}
   .card.busy .sub::after{content:" ●";color:var(--c)}
   .rail .foot{padding:8px 12px;border-top:1px solid #2c3140;display:flex;gap:8px;font-size:11px;color:#9aa3b2}
   .rail .foot .btn{border:1px solid #384056;border-radius:4px;padding:3px 8px;color:#dfe3ea}
@@ -100,14 +102,10 @@
   .desktop.top .strip{left:0;right:0;top:0;bottom:auto;width:auto;height:8px;flex-direction:row}
   .desktop.top .strip span{border-bottom:0;border-right:1px solid rgba(0,0,0,.35)}
   .desktop.top .strip span.on{width:auto;height:14px}
-  .desktop.top .rail{left:0;right:0;top:0;bottom:auto;width:auto;height:150px;transform:translateY(-100%);border-right:0;border-bottom:1px solid #2c3140}
+  .desktop.top .rail{left:0;right:0;top:0;bottom:auto;width:auto;height:190px;transform:translateY(-100%);border-right:0;border-bottom:1px solid #2c3140}
   .desktop.top .rail.open{transform:none}
-  .desktop.top .rail .head{display:none}
-  .desktop.top .rail .list{flex-direction:row;padding:12px 10px 8px;overflow-x:auto}
-  .desktop.top .card{grid-template-columns:1fr;grid-template-rows:auto auto;gap:5px;width:150px;flex:none;align-content:start}
-  .desktop.top .card .thumb{width:100%;height:64px}
-  .desktop.top .card .key{position:absolute;right:8px;top:8px}
-  .desktop.top .card{position:relative}
+  .desktop.top .rail .list{flex-direction:row;overflow-x:auto}
+  .desktop.top .card{width:204px;flex:none;align-content:start}
   .desktop.top .rail .foot{border-top:0;border-left:1px solid #2c3140;flex-direction:column;justify-content:center;padding:0 14px}
   .desktop.top .rail{flex-direction:row}
   .edge{display:inline-flex;border:1px solid var(--page-line);border-radius:6px;overflow:hidden;margin-left:auto}
@@ -184,7 +182,6 @@
     <!-- Concept A -->
     <div class="strip" id="strip" title="Hover or click to open"></div>
     <div class="rail" id="rail">
-      <div class="head"><b>Terminals</b><span id="count">6 windows</span></div>
       <div class="list" id="railList"></div>
       <div class="foot"><span class="btn">+ New  <span style="opacity:.6">Ctrl+Alt+N</span></span></div>
     </div>
@@ -336,8 +333,7 @@
     $('railList').innerHTML = T.map((t,i)=>`
       <div class="card ${i===active?'on':''} ${t.busy?'busy':''}" style="--c:${t.c}" data-i="${i}">
         <div class="thumb"><i></i><i></i><i></i><i></i></div>
-        <div class="meta"><div class="name">${t.id}</div><div class="sub">${t.shell} · ${t.cwd}</div></div>
-        <span class="key">${i+1}</span>
+        <div class="meta"><div class="name">${t.id}<span class="key">${i+1}</span></div><div class="sub">${t.shell} · ${t.cwd}</div></div>
       </div>`).join('');
   }
   function renderGrid(){
@@ -365,7 +361,6 @@
     const p = PROFILES[prof], c = nextColor(), id='term-'+(nextN++);
     T.push({id, tag:id.slice(-2).toUpperCase(), c, shell:p.n.toLowerCase(), cwd:p.cwd, title:p.n+' — '+p.cwd, busy:false,
       body:`<span class="p">❯</span> <span class="d"># fresh ${p.n} in ${p.cwd}</span>\n<span class="cursor"></span>`});
-    $('count').textContent = T.length+' windows';
     openNew(false); setActive(T.length-1);
   }
   function setEdge(e){

@@ -2,9 +2,9 @@
   "version": 1,
   "hideFromTaskbar": false,
   "strip": { "edge": "top", "thickness": 8, "activeThickness": 14, "openRailOnHover": true, "reserveScreenSpace": false,
-    "autoHide": false, "hiddenThickness": 2, "collapseDelayMs": 800 },
-  "hotkeys": { "openSwitcher": "Ctrl+`", "newTerminal": "Ctrl+Alt+N", "jumpPrefix": "Ctrl+Alt" },
-  "quickLaunch": { "defaultProfile": "Ubuntu", "defaultShell": "wsl", "defaultDistro": "Ubuntu", "namePrefix": "term-" },
+    "autoHide": false, "hiddenThickness": 2, "collapseDelayMs": 800, "topWidth": "centered" },
+  "hotkeys": { "openSwitcher": "Ctrl+`", "newTerminal": "Ctrl+Alt+N", "newTerminalQuiet": "Ctrl+Alt+Shift+N", "jumpPrefix": "Ctrl+Alt" },
+  "quickLaunch": { "defaultProfile": "Ubuntu", "defaultShell": "wsl", "defaultDistro": "Ubuntu", "namePrefix": "term-", "lastDirectory": "C:\\src" },
   "terminals": [
     { "name": "anvil", "tag": "AN", "color": "#B07CF5", "profile": "Ubuntu", "shell": "wsl", "distro": "Ubuntu",
       "workingDirectory": "~/anvil", "command": "claude --resume", "jumpKey": 1,

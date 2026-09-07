@@ -2,11 +2,9 @@
 
 A Windows Terminal switchboard: name your terminals, give each one a color, see at a glance which ones are working or waiting on you, and jump to any of them from anywhere — without six entries in the taskbar.
 
-Built for a day that mixes PowerShell, WSL, Docker, Python, Node, and CLI AI harnesses across 5–10 Windows Terminal windows.
-
 ## What it does
 
-- **Registry** — a `registry.json` of named terminals: profile, shell, working dir, startup command, color, jump key. That file is the whole product state.
+- **Registry** — a `switchboard.json` of named terminals: profile, shell, working dir, startup command, color, jump key. That file is the whole product state.
 - **Edge strip** — an 8 px strip on the top (or left/right) screen edge, one colored segment per terminal. Active one glows; one that wants attention pulses.
 - **Colored frames** — the terminal's color is painted onto its Windows Terminal window border (Windows 11) and passed as the tab color, so you always know which window you're looking at.
 - **Hotkeys** — `Ctrl+Alt+1…9` jumps, `Ctrl+Alt+N` opens a fresh terminal (auto-named, auto-colored, registered), `Ctrl+Alt+Space` jumps to whichever terminal is waiting on you.
@@ -28,7 +26,7 @@ dotnet test
 dotnet run --project src/Switchboard.App
 ```
 
-On first run there is no registry. Copy `docs/registry.example.json` to `%APPDATA%\Switchboard\registry.json` and edit it, or just press `Ctrl+Alt+N` a few times.
+On first run there is no registry. Copy `docs/switchboard.example.json` to `%APPDATA%\Switchboard\switchboard.json` and edit it, or just press `Ctrl+Alt+N` a few times.
 
 ## Layout
 

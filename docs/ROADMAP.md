@@ -26,9 +26,9 @@ Milestones are vertical slices; each one is usable on its own.
 - Opt-in `hideFromTaskbar`: remove bound windows' taskbar buttons via `ITaskbarList`, restore on unbind/exit, survive Explorer restarts (ADR-0009).
 
 ## M3 — Overlay switcher + quick-launch picker
-- `Ctrl+`` overlay: thumbnail grid, fuzzy filter, 1–9, arrows, Enter, Esc; hold-to-peek.
-- `Ctrl+Alt+N` picker: Tab cycles profiles, Enter launches, "keep" toggle, last-dir memory.
-- Cycle-recent with MRU list rather than single previous.
+- `Ctrl+`` overlay: thumbnail grid, fuzzy filter, 1–9, arrows, Enter, Esc (ADR-0016). Hold-to-peek deferred until daily use picks its semantics.
+- `Ctrl+Alt+N` picker: Tab cycles WT profiles (read from WT's settings.json), Enter launches, "keep" toggle, last-dir memory; `Ctrl+Alt+Shift+N` quiet launch (ADR-0017).
+- Cycle-recent walks an MRU list rather than a single previous (ADR-0015).
 
 ## M4 — Settings UI
 - The settings/registry screen from `docs/design/settings-registry.html`: table + editor, strip, hotkeys, status rules, appearance.

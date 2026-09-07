@@ -15,7 +15,7 @@ dotnet run --project src/Switchboard.App
 dotnet format                     # before every commit
 ```
 
-Registry lives at `%APPDATA%\Switchboard\registry.json`. A sample is in `docs/registry.example.json`.
+Registry lives at `%APPDATA%\Switchboard\switchboard.json`. A sample is in `docs/switchboard.example.json`.
 
 ## Architecture in one paragraph
 
@@ -47,7 +47,7 @@ Registry lives at `%APPDATA%\Switchboard\registry.json`. A sample is in `docs/re
 ## When you change behaviour
 
 - New setting → add to the record in `RegistryFile.cs` with a default, bump `CurrentVersion` only if old files can't load, add a `Migrate` step, add a store test.
-- New hotkey → `HotkeySettings` + `HotkeyBindings.RegisterAll` + a `HotkeyChordTests` case if the chord shape is new.
+- New hotkey → `HotkeySettings` + `HotkeyBindings.Rebind` + a `HotkeyChordTests` case if the chord shape is new.
 - New status source → feed it into `StatusEngine` via a new public method; add an engine test; document it in PRD R19.
 - New Win32 call → `NativeMethods.cs`, then a small typed wrapper (`FrameColorizer`, `WindowFocuser` are the pattern).
 - Anything that changes the shape of the product → an ADR first, in `docs/adr/`, numbered, with Status/Context/Decision/Consequences.
@@ -63,4 +63,4 @@ Registry lives at `%APPDATA%\Switchboard\registry.json`. A sample is in `docs/re
 
 ## Current milestone
 
-M0 → M1. The code has not been compiled on a Windows machine yet. The first job is `dotnet build`, fix what the compiler finds, `dotnet test`, then run it and confirm a colored WT window appears on `Ctrl+Alt+N`.
+M3 (overlay switcher + quick-launch picker + MRU cycle-recent), code-complete on branch `m3-switcher-picker` pending hardware verification. M2's Slice 4/6 manual checks are still open too — see `docs/PROGRESS.md` for the live checklist.

@@ -1,7 +1,17 @@
 # Project Progress
 
 ## Current Focus
-All six M2 slices are code-complete (ADRs 0011–0014, plus amendments to 0002/0010/0012). Remaining for M2 exit: manual verification of Slices 4 and 6, the measured motion-sampling CPU number for ADR-0013, and daily use. M1 exit (daily-use week) runs in parallel.
+M3 code-complete on branch `m3-switcher-picker` (built on `rail-stacked-thumbs`, which still awaits its own visual check + merge): overlay switcher, quick-launch picker, MRU cycle-recent — ADRs 0015–0017, 119/119 tests. Since then, top-edge width became a setting (`strip.topWidth`, strip and rail together) and `tools/Release.ps1` landed. All M3 slices plus the two width modes need hardware verification below. Still open from M2: manual verification of Slices 4 and 6, the motion-sampling CPU number for ADR-0013, and daily use.
+
+## M3 Slices
+- [x] Slice 1: MRU list + cycle-recent walk (`MruList` in Core, frozen-snapshot sessions) — ADR-0015; needs manual verify
+- [ ] Manual verify Slice 1: focus A, B, C in order; one `Ctrl+Shift+\`` lands on B; tap again quickly → A; pause 2 s, tap once → back to C (the walk committed). Close a terminal in the chain → cycling skips it. Fresh start → first tap is a no-op until two terminals have been focused
+- [x] Slice 2: `Ctrl+\`` overlay switcher (card grid, DWM thumbnails, fuzzy filter, arrows/1–9/Enter/Esc, MRU preselect) — ADR-0016; needs manual verify
+- [ ] Manual verify Slice 2: `Ctrl+\`` from a terminal → centered grid, numbers match strip badges, previously-focused card preselected, bare Enter = switch-to-recent; **first check the filter box actually types** (foreground-lock risk); type a fragment → cards filter with matched letters bright, no thumbnail flicker; digits jump only while the filter is empty; Esc restores the exact prior window; click-away hides; selecting a Closed terminal relaunches it; open/close 20× → no leaks; `Ctrl+\`` while open closes
+- [x] Slice 3: `Ctrl+Alt+N` picker + WT profile enumeration (`WtSettingsReader` Core, `WtProfileProvider` App) — ADR-0017; needs manual verify
+- [ ] Manual verify Slice 3: picker shows next `term-N`, default profile chip selected, keep per `persistByDefault`; bare Enter launches exactly what the quiet chord does; Tab walks the real WT profiles (hidden ones absent — compare WT's own dropdown); pick a WSL profile + Enter → colored, tracked window; uncheck keep (Ctrl+K) → row vanishes from the registry when the window closes; Esc restores focus; `Ctrl+Alt+Shift+N` launches with zero UI; rename WT's settings.json temporarily → picker still opens with only the default profile, warning logged
+- [x] Slice 4: last-directory memory (`quickLaunch.lastDirectory`, quiet-save) — rides ADR-0017; needs manual verify
+- [ ] Manual verify Slice 4: launch via picker with `C:\src` in the directory box → shell opens there; `switchboard.json` gains `lastDirectory` within ~2 s with no reload flicker; next picker open prefills it; the quiet chord lands there too; delete the folder → launch still succeeds in the profile default, warning logged; hand-edit `lastDirectory` → next launch honors it
 
 ## M2 Slices
 - [x] Slice 1: app-bar mode (`reserveScreenSpace`) + hide over fullscreen — ADR-0011; verified by Jeremy
@@ -30,10 +40,43 @@ All six M2 slices are code-complete (ADRs 0011–0014, plus amendments to 0002/0
 - [x] Manual verify strip auto-hide: collapse to sliver, hover slide-out, Attention pulse + slide-out until focused
 - [ ] M1 exit: run daily for a week; tune status rules against real WT titles
 - [x] Verify Attention fires within 2 s for an AI harness waiting on input (PRD success criterion)
+- [ ] Visual check of `rail-stacked-thumbs` branch (both edges), then merge to main
+- [ ] Update `railTopHeightDips` 150 → 190 in the live switchboard.json (old value clips the top-edge cards)
+- [x] Rename `registry.json` → `switchboard.json`, with a one-time read-fallback to the old name
+- [ ] Manual verify `strip.topWidth`: default `centered` → bar and rail same width and centered, both re-fit when a terminal is added/removed; set `"full"` → both span the screen, no restart needed; with `autoHide` on, the collapsed sliver stays centered at the same width (only thickness animates); confirm `reserveScreenSpace` still reserves a full-width band in either mode
+- [ ] Manual verify the rename: restart Switchboard with the old file in place — same terminals, `switchboard.json` appears beside an untouched `registry.json`, hot-reload still fires on a hand-edit
 
 ## Progress Log
 
+### 2026-09-06 (M3)
+- M3 planned with Jeremy and implemented in one pass on `m3-switcher-picker` (branched off `rail-stacked-thumbs` so it carries the rename + rail restyle). Decisions: profiles read live from WT's settings.json (not a curated list); switcher grid in registry order with MRU preselect; hold-to-peek deferred.
+- Slice 1 (ADR-0015): `MruList` in Core (`Touch`/`Forget`/`Rename`/`Prune`); `TerminalSession` drops `_previousForegroundName` for it and `CycleRecentAsync` walks a snapshot frozen at the first tap — 1.5 s settle timer, skip dead entries, commit-touch only the landing terminal, abort on any outside foreground change. Runtime-only, empty after restart.
+- Slice 2 (ADR-0016): `ActivatableOverlayWindow` base (capture foreground → `WindowFocuser.Focus` own HWND → Esc restores / commit doesn't / Deactivated hides silently; Closing cancelled outside shutdown so Alt+F4 can't kill the reusable HWND). `SwitcherWindow` copies the rail's thumbnail sync verbatim; `SwitcherViewModel` copies `RailViewModel.Sync()`'s upsert-in-place; filter = `ICollectionView` over `FuzzyMatcher` (new in Core, subsequence + spans for highlight). Digits jump only while the filter is empty — names may contain digits.
+- Slice 3 (ADR-0017): `WtSettingsReader` (Core, pure, JSONC-tolerant, both `profiles` shapes, hidden skipped, never throws) + `WtProfileProvider` (App: packaged/Preview/unpackaged paths, re-read per open). Picker seeds fully from defaults so bare Enter ≡ the old launch; new `newTerminalQuiet` chord (`Ctrl+Alt+Shift+N`) keeps the zero-UI path. Chips launch by name, never guid.
+- Slice 4: `quickLaunch.lastDirectory` (additive, no version bump) + `TerminalSession.RememberLastDirectoryAsync` via the `RememberHwnd` quiet-save path. Fallback applies only on actual launches — adopt seeds don't inherit a directory. Nonexistent dirs dropped with a warning, never a failed launch; WSL paths skip the check.
+- 108/108 tests (20 new: MruList 6, FuzzyMatcher 7, WtSettingsReader 6, store round-trip 1). CLAUDE.md staleness fixed (`RegisterAll` → `Rebind`, milestone section); PRD R16/R21/R22 and ROADMAP M3 updated.
+- Not verified on hardware: all four M3 slice checklists above. First thing to check is that the switcher's filter box actually types (foreground-lock risk, ADR-0016 Consequences).
+- Slide-animation smoothness pass (03758ff): both slide timers were Background-priority DispatcherTimers, starved exactly when the rail's opening slide triggers layout/thumbnail work; new shared `WindowSlide` ticks on `CompositionTarget.Rendering` (vsync-aligned). Rail's position-only slide now passes `SWP_NOSIZE` (skips layered-window surface reallocation); mid-slide reversals start from the actual current rect instead of snapping. Feel (220 ms ease-out cubic) unchanged.
+- Slide smoothness verified by Jeremy on hardware ("much better").
+- Top-edge geometry is now content-width and centered, and it's a setting: `strip.topWidth` = `full` | `centered` (default centered, no version bump). The strip follows the same setting as the rail, so the color bar and the slide-down tray always match — `StripPlacement.Compute` gained the rail's optional content-length parameter and a new App-side `RailMetrics` owns the one width formula both windows (and the XAML card template) read.
+- Two calls worth knowing: the width comes from the registry's terminal count, not the strip's visible segments, because `showClosedTerminals` can hide segments the rail still lists (so the strip now re-docks on `RegistryChanged` too); and app-bar mode stays full-width regardless, since a reserved band spans the whole edge by nature. ADR-0012 amended twice.
+- New `tools/Release.ps1`: publishes Release to `dist/Switchboard-v<version>/`, version from `-Version` or the csproj, refuses to overwrite without `-Force`. `dist/` gitignored. Exercised end-to-end with a throwaway version.
+- 119/119 tests, build and `dotnet format` clean. Not verified on hardware: the two width modes.
+
+### 2026-09-06
+- Registry file renamed `registry.json` → `switchboard.json` (JPC-TODO). Filename only: "registry" stays the product word, so `IRegistryStore`, `RegistryFile`, `RegistryWatcher` and the Core namespace are untouched.
+- Existing configs are adopted, not stranded: the store reads the old name when the new one is absent, and `TerminalSession.InitializeAsync` writes the new file immediately rather than at the next save — otherwise the watcher would sit on a file that doesn't exist yet. Old file left in place as a de facto backup. ADR-0008 amended.
+- `%APPDATA%` moved out of Core into a new App-side `RegistryPaths`, so `JsonRegistryStore` now takes only strings — invariant 1 was being broken by the old `DefaultPath` static.
+- 88/88 tests (3 new: adoption, save-after-adoption keeps the old file, new file wins when both exist). Docs, PRD, README, ADR-0008 and `docs/switchboard.example.json` renamed to match.
+- Not verified on hardware: Switchboard was running and holding the build output, so the App was compiled to a scratch dir to prove it builds. Needs a restart to exercise the real adoption path.
+- Next: unchanged — the standing Slice 4/6 verifications and the rail-stacked-thumbs visual check.
+
 ### 2026-09-05
+- Rail card restyle on branch `rail-stacked-thumbs` (dbfe346): stacked layout — name/badge/pencil under a full-width 204×115 thumbnail (was 76×46 side-by-side), 16:9 so DWM stops letterboxing; "Terminals" header row removed.
+- Constraint learned: DWM composites live thumbnails above the rail's own visuals, so nothing can overlay the thumb slot — the jump-key badge moved to the name row (mockup's overlay idea is dead for live thumbs).
+- `RailTopHeightDips` default 150 → 190 (fits one stacked card; no version bump); mockup `layout-concepts.html` updated to match the XAML.
+- Build clean, 85/85 tests; app smoke-launched OK. Not yet visually verified — and Jeremy's live registry still serializes 150, which will clip the top-edge rail until edited.
+- Next: Jeremy eyeballs the new rail on both edges, merges the branch, then the standing Slice 4/6 verifications.
 - Slice 5 hardware bugs fixed: top-edge foot rotated to a right column (the bottom dock was crushing the card list — the "disappearing thumbnails"), first-open orientation re-applied post-layout, unbound list capped with its own scrollbar.
 - Restart recovery made HWND-first (ADR-0002 amendment): binds persist `lastHwnd`; log-verified 3/3 recovered by handle where title matching failed. Rail also gained the strip's context menu (it covers the strip while open).
 - Slice 6 done (last M2 slice), ADR-0014: live rename applies everywhere now — `WindowTracker.Rekey` keeps the HWND bound, `StatusEngine.Renamed` carries Attention across (new test), `TerminalSession.UpdateTerminalAsync` coordinates and persists.

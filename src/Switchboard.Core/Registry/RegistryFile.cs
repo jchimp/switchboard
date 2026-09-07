@@ -2,7 +2,7 @@ using Switchboard.Core.Status;
 
 namespace Switchboard.Core.Registry;
 
-/// <summary>Root of <c>registry.json</c>. This file is the whole product state.</summary>
+/// <summary>Root of <c>switchboard.json</c>. This file is the whole product state.</summary>
 public sealed record RegistryFile
 {
     public const int CurrentVersion = 1;
@@ -36,6 +36,16 @@ public enum ScreenEdge
     Right,
 }
 
+/// <summary>How the top-edge strip and rail span the screen (ADR-0012 as amended).</summary>
+public enum TopWidthMode
+{
+    /// <summary>Span the full work-area width.</summary>
+    Full,
+
+    /// <summary>Only as wide as the terminal content, centered; strip and rail align.</summary>
+    Centered,
+}
+
 public sealed record StripSettings
 {
     public ScreenEdge Edge { get; init; } = ScreenEdge.Top;
@@ -62,8 +72,17 @@ public sealed record StripSettings
     /// <summary>Rail width in DIPs when docked to a vertical edge (ADR-0012).</summary>
     public int RailSizeDips { get; init; } = 236;
 
-    /// <summary>Rail height in DIPs when docked to the top edge.</summary>
-    public int RailTopHeightDips { get; init; } = 150;
+    /// <summary>Rail height in DIPs when docked to the top edge. Sized to fit one stacked
+    /// card: 115-dip thumb + meta rows + card and scroller padding.</summary>
+    public int RailTopHeightDips { get; init; } = 190;
+
+    /// <summary>
+    /// Top-edge width: full screen, or only as wide as the terminals and centered. The
+    /// strip and the rail both follow it so the bar and the slide-down tray always align.
+    /// App-bar mode (<see cref="ReserveScreenSpace"/>) is always full width — a reserved
+    /// band spans the whole edge by nature.
+    /// </summary>
+    public TopWidthMode TopWidth { get; init; } = TopWidthMode.Centered;
 
     /// <summary>App-bar mode: reserve the strip's pixels so maximized windows stop at it.</summary>
     public bool ReserveScreenSpace { get; init; }
@@ -80,6 +99,9 @@ public sealed record StripSettings
 public sealed record HotkeySettings
 {
     public string OpenSwitcher { get; init; } = "Ctrl+`";
+
+    /// <summary>Launches straight from the quick-launch defaults, bypassing the picker (ADR-0017).</summary>
+    public string NewTerminalQuiet { get; init; } = "Ctrl+Alt+Shift+N";
 
     public string CycleRecent { get; init; } = "Ctrl+Shift+`";
 
@@ -107,4 +129,10 @@ public sealed record QuickLaunchSettings
     public string NamePrefix { get; init; } = "term-";
 
     public bool PersistByDefault { get; init; } = true;
+
+    /// <summary>
+    /// The directory of the last picker launch; new quick launches start here (R21).
+    /// Written via the quiet-save path — hand-edits win on the next hot-reload.
+    /// </summary>
+    public string? LastDirectory { get; init; }
 }

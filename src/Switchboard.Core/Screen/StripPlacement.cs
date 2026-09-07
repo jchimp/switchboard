@@ -56,17 +56,26 @@ public static class StripPlacement
         return index <= secondaries.Count ? secondaries[index - 1] : primary;
     }
 
-    /// <summary>Computes the strip's rect on <paramref name="monitor"/>; thickness is given in DIPs.</summary>
-    public static PixelRect Compute(MonitorBounds monitor, ScreenEdge edge, int thicknessDips)
+    /// <summary>
+    /// Computes the strip's rect on <paramref name="monitor"/>; thickness is given in DIPs.
+    /// For the top edge, <paramref name="contentLengthDips"/> sizes the bar to its content
+    /// and centers it in the work area, matching the rail; null spans the full width.
+    /// Left/right strips are full-height regardless.
+    /// </summary>
+    public static PixelRect Compute(
+        MonitorBounds monitor, ScreenEdge edge, int thicknessDips, int? contentLengthDips = null)
     {
         var wa = monitor.WorkArea;
         // Never round a sliver down to nothing — a 0-px strip can't be hovered back out.
         var px = Math.Max(1, (int)Math.Round(thicknessDips * monitor.DpiScale));
+        var width = contentLengthDips is { } content
+            ? Math.Clamp((int)Math.Round(content * monitor.DpiScale), 1, wa.Width)
+            : wa.Width;
         return edge switch
         {
             ScreenEdge.Left => new PixelRect(wa.X, wa.Y, px, wa.Height),
             ScreenEdge.Right => new PixelRect(wa.X + wa.Width - px, wa.Y, px, wa.Height),
-            _ => new PixelRect(wa.X, wa.Y, wa.Width, px),
+            _ => new PixelRect(wa.X + (wa.Width - width) / 2, wa.Y, width, px),
         };
     }
 

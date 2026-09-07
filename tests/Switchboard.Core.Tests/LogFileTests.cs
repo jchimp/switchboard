@@ -53,7 +53,7 @@ public class LogFileTests
     public void Prune_ignores_files_it_does_not_own()
     {
         var today = new DateOnly(2026, 9, 4);
-        var names = new[] { "registry.json", "notes.log", "switchboard-notadate.log", "switchboard-19990101.txt" };
+        var names = new[] { "switchboard.json", "notes.log", "switchboard-notadate.log", "switchboard-19990101.txt" };
         Assert.Empty(LogFile.SelectPrunable(names, today));
     }
 }

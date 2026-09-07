@@ -6,6 +6,7 @@ using System.Windows.Interop;
 using Switchboard.App.Rail;
 using Switchboard.App.Services;
 using Switchboard.App.ViewModels;
+using Switchboard.Core.Registry;
 using Switchboard.Core.Screen;
 using Switchboard.Windows;
 
@@ -21,25 +22,24 @@ public partial class StripWindow : Window
     private const int SlideDurationMs = 150;
 
     private readonly StripViewModel _vm;
+    private readonly TerminalSession _session;
     private readonly TaskbarVisibility _taskbarVisibility;
     private readonly AppBar _appBar;
     private readonly RailWindow _rail;
     private readonly System.Windows.Threading.DispatcherTimer _redockDebounce;
     private readonly System.Windows.Threading.DispatcherTimer _collapseTimer;
-    private readonly System.Windows.Threading.DispatcherTimer _slideTimer;
+    private readonly WindowSlide _slide;
     private readonly System.Windows.Threading.DispatcherTimer _hoverOpenTimer;
     private bool _collapsed;
     private bool _fullscreenHidden;
     private PixelRect? _currentRect;
-    private PixelRect _slideFrom;
-    private PixelRect _slideTo;
-    private long _slideStartTicks;
 
     public StripWindow(
         StripViewModel vm, TaskbarVisibility taskbarVisibility, AppBar appBar,
         TerminalSession session, RailWindow rail)
     {
         _vm = vm;
+        _session = session;
         _taskbarVisibility = taskbarVisibility;
         _appBar = appBar;
         _rail = rail;
@@ -60,6 +60,11 @@ public partial class StripWindow : Window
             }
         };
         vm.Items.CollectionChanged += (_, _) => Dock();
+
+        // In Centered mode the bar's width tracks the registry's terminal count, which can
+        // change without changing the visible segments (a Closed terminal added while
+        // ShowClosedTerminals is off) — and a hot-reload can flip TopWidth itself.
+        session.RegistryChanged += () => Dock();
         vm.PropertyChanged += OnViewModelPropertyChanged;
 
         // Display changes arrive in bursts (one WM_SETTINGCHANGE per work-area tweak);
@@ -91,8 +96,13 @@ public partial class StripWindow : Window
             }
         };
 
-        _slideTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-        _slideTimer.Tick += (_, _) => SlideStep();
+        // Frame-synced slide (CompositionTarget.Rendering) — a Background-priority timer
+        // jitters whenever layout or render work competes with it. The strip's slide
+        // changes thickness, so each frame both moves and resizes; _currentRect tracks
+        // every applied frame so a mid-slide re-dock animates from the true position.
+        _slide = new WindowSlide(
+            () => new WindowInteropHelper(this).Handle, SlideDurationMs,
+            applied: rect => _currentRect = rect);
 
         // The strip counts as "inside" for the rail's close probe: hovering the strip with
         // the rail open must not close it (and the open slide passes under the cursor).
@@ -300,57 +310,40 @@ public partial class StripWindow : Window
 
         if (s.ReserveScreenSpace)
         {
-            // App-bar mode: propose from the full monitor bounds and occupy whatever the
-            // shell grants; the work area would include our own band and drift (ADR-0011).
+            // App-bar mode is always full width — a reserved band spans the whole edge by
+            // nature, so TopWidth doesn't apply here.
+            // Propose from the full monitor bounds and occupy whatever the shell grants;
+            // the work area would include our own band and drift (ADR-0011).
             var granted = _appBar.Apply(
                 hwnd, s.Edge, StripPlacement.ComputeAppBar(monitor, s.Edge, s.Thickness));
-            _slideTimer.Stop();
+            _slide.Stop();
             Apply(hwnd, granted ?? StripPlacement.Compute(monitor, s.Edge, s.Thickness));
             return;
         }
 
         _appBar.Remove();
         var thickness = _collapsed ? Math.Min(s.HiddenThickness, s.Thickness) : s.Thickness;
-        var rect = StripPlacement.Compute(monitor, s.Edge, thickness);
+
+        // Centered mode: the bar spans the same content width as the rail, so the two line
+        // up. The count comes from the registry, not _vm.Items — the rail always shows
+        // every registered terminal, while the strip hides Closed ones under
+        // ShowClosedTerminals, and a mismatch there would misalign the bar and the tray.
+        // The collapsed sliver keeps the same width; only thickness animates.
+        int? length = _vm.IsVertical || s.TopWidth == TopWidthMode.Full
+            ? null
+            : RailMetrics.ContentLengthDips(_session.Registry.Terminals.Count);
+        var rect = StripPlacement.Compute(monitor, s.Edge, thickness, length);
 
         if (animate && _currentRect is { } from && from != rect)
         {
-            _slideFrom = from;
-            _slideTo = rect;
-            _slideStartTicks = Environment.TickCount64;
-            _slideTimer.Start();
+            _slide.Start(from, rect);
         }
         else
         {
-            _slideTimer.Stop();
+            _slide.Stop();
             Apply(hwnd, rect);
         }
     }
-
-    private void SlideStep()
-    {
-        var hwnd = new WindowInteropHelper(this).Handle;
-        if (hwnd == 0)
-        {
-            _slideTimer.Stop();
-            return;
-        }
-
-        var t = Math.Clamp((Environment.TickCount64 - _slideStartTicks) / (double)SlideDurationMs, 0.0, 1.0);
-        var eased = 1 - Math.Pow(1 - t, 3); // ease-out cubic
-        Apply(hwnd, new PixelRect(
-            Lerp(_slideFrom.X, _slideTo.X, eased),
-            Lerp(_slideFrom.Y, _slideTo.Y, eased),
-            Lerp(_slideFrom.Width, _slideTo.Width, eased),
-            Lerp(_slideFrom.Height, _slideTo.Height, eased)));
-
-        if (t >= 1.0)
-        {
-            _slideTimer.Stop();
-        }
-    }
-
-    private static int Lerp(int from, int to, double t) => from + (int)Math.Round((to - from) * t);
 
     private void Apply(nint hwnd, PixelRect rect)
     {

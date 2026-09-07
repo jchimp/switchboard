@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Switchboard.Core.Focus;
 using Switchboard.Core.Launch;
 using Switchboard.Core.Registry;
 using Switchboard.Core.Status;
@@ -20,6 +21,9 @@ public sealed class TerminalSession : IDisposable
     // Covers the store's tmp-write → bak-copy → rename burst so we don't reload our own saves.
     private static readonly TimeSpan SelfWriteMute = TimeSpan.FromSeconds(2);
 
+    // Taps closer together than this walk deeper into the same cycle session (ADR-0015).
+    private static readonly TimeSpan CycleSettle = TimeSpan.FromMilliseconds(1500);
+
     private readonly IRegistryStore _store;
     private readonly ITerminalLauncher _launcher;
     private readonly WindowTracker _tracker;
@@ -33,9 +37,13 @@ public sealed class TerminalSession : IDisposable
     private readonly System.Windows.Threading.Dispatcher _dispatcher;
     private readonly System.Windows.Threading.DispatcherTimer _tick;
     private readonly Dictionary<string, DateTimeOffset> _focusOnAppear = new(StringComparer.Ordinal);
+    private readonly MruList _mru = new();
+    private readonly System.Windows.Threading.DispatcherTimer _cycleTimer;
     private StatusEngine _status;
     private string? _foregroundName;
-    private string? _previousForegroundName;
+    private List<string>? _cycleSnapshot;
+    private int _cycleIndex;
+    private string? _cycleTarget;
 
     public TerminalSession(
         IRegistryStore store, ITerminalLauncher launcher, WindowTracker tracker,
@@ -59,6 +67,8 @@ public sealed class TerminalSession : IDisposable
             _status.Tick();
             SampleMotion(); // rides the existing 1 s tick — no new timer (ADR-0013)
         };
+        _cycleTimer = new System.Windows.Threading.DispatcherTimer { Interval = CycleSettle };
+        _cycleTimer.Tick += (_, _) => CommitCycle();
     }
 
     public RegistryFile Registry { get; private set; } = RegistryFile.Empty;
@@ -74,6 +84,12 @@ public sealed class TerminalSession : IDisposable
     public string? ForegroundName => _foregroundName;
 
     /// <summary>
+    /// Terminal names most-recent-first; runtime-only, empty after a restart. The overlay
+    /// switcher preselects from here and cycle-recent walks it (ADR-0015).
+    /// </summary>
+    public IReadOnlyList<string> RecentOrder => _mru.Order;
+
+    /// <summary>
     /// When this returns true, motion sampling skips the tick. The composition root wires
     /// it to "a slide animation is running": PrintWindow costs a few ms on the UI thread
     /// and would stutter the 16 ms animation frames (ADR-0013).
@@ -83,6 +99,15 @@ public sealed class TerminalSession : IDisposable
     public async Task InitializeAsync()
     {
         Registry = await _store.LoadAsync();
+
+        // The store reads the pre-rename file name once; convert it now rather than at the
+        // next save, so the watcher below has the current file to watch from the first run.
+        if (_store.AdoptedLegacyFile)
+        {
+            await PersistAsync();
+            _log.LogInformation("Adopted the legacy registry file; wrote switchboard.json");
+        }
+
         _status = new StatusEngine(_time, Registry.GlobalStatusRules);
         _status.StateChanged += (name, state) => StateChanged?.Invoke(name, state);
 
@@ -210,8 +235,66 @@ public sealed class TerminalSession : IDisposable
         return def is null ? Task.CompletedTask : ActivateAsync(def.Name);
     }
 
-    public Task CycleRecentAsync() =>
-        _previousForegroundName is { } prev ? ActivateAsync(prev) : Task.CompletedTask;
+    /// <summary>
+    /// One tap switches to the previous terminal; taps within <see cref="CycleSettle"/> walk
+    /// deeper into a snapshot frozen at the first tap, so the list doesn't reshuffle under
+    /// the walk. Only the terminal the walk lands on gets touched, when the session settles
+    /// (ADR-0015).
+    /// </summary>
+    public Task CycleRecentAsync()
+    {
+        if (_cycleSnapshot is null)
+        {
+            if (_mru.Order.Count == 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            _cycleSnapshot = [.. _mru.Order];
+            // From a tracked terminal the front entry is the terminal itself, so the first
+            // tap must land one deeper; from anywhere else it lands on the front entry.
+            _cycleIndex = _cycleSnapshot[0] == _foregroundName ? 0 : -1;
+        }
+
+        // Closed or unregistered entries are skipped rather than relaunched: a walk must
+        // never stall behind a 15 s launch-and-bind.
+        for (var step = 0; step < _cycleSnapshot.Count; step++)
+        {
+            _cycleIndex = (_cycleIndex + 1) % _cycleSnapshot.Count;
+            var name = _cycleSnapshot[_cycleIndex];
+            if (Definition(name) is null || _tracker.Find(name) is null)
+            {
+                continue;
+            }
+
+            _cycleTimer.Stop();
+            _cycleTimer.Start();
+            _cycleTarget = name;
+            return ActivateAsync(name);
+        }
+
+        AbortCycle();
+        return Task.CompletedTask;
+    }
+
+    private void CommitCycle()
+    {
+        _cycleTimer.Stop();
+        if (_cycleTarget is { } landed)
+        {
+            _mru.Touch(landed);
+        }
+
+        _cycleSnapshot = null;
+        _cycleTarget = null;
+    }
+
+    private void AbortCycle()
+    {
+        _cycleTimer.Stop();
+        _cycleSnapshot = null;
+        _cycleTarget = null;
+    }
 
     public async Task AddTerminalAsync(TerminalDefinition def)
     {
@@ -263,9 +346,15 @@ public sealed class TerminalSession : IDisposable
                 _foregroundName = updated.Name;
             }
 
-            if (_previousForegroundName == oldName)
+            _mru.Rename(oldName, updated.Name);
+            if (_cycleSnapshot is { } snapshot && snapshot.IndexOf(oldName) is >= 0 and var at)
             {
-                _previousForegroundName = updated.Name;
+                snapshot[at] = updated.Name; // a rename mid-walk must not break the chain
+            }
+
+            if (_cycleTarget == oldName)
+            {
+                _cycleTarget = updated.Name;
             }
         }
 
@@ -282,6 +371,7 @@ public sealed class TerminalSession : IDisposable
     public async Task RemoveTerminalAsync(string name)
     {
         Registry = Registry with { Terminals = Registry.Terminals.Where(t => t.Name != name).ToList() };
+        _mru.Forget(name);
         if (_tracker.Find(name) is { } live)
         {
             _taskbar.Show(live.Hwnd); // the window outlives us; give its button back
@@ -293,7 +383,7 @@ public sealed class TerminalSession : IDisposable
     }
 
     /// <summary>
-    /// Re-reads registry.json and applies adds, removes, and edits to live state (ADR-0008).
+    /// Re-reads switchboard.json and applies adds, removes, and edits to live state (ADR-0008).
     /// A file that fails to load keeps the current in-memory registry — hand-edits are
     /// hostile input and must never take the session down.
     /// </summary>
@@ -306,7 +396,7 @@ public sealed class TerminalSession : IDisposable
         }
         catch (Exception ex)
         {
-            _log.LogWarning(ex, "registry.json changed but did not load; keeping the current registry");
+            _log.LogWarning(ex, "switchboard.json changed but did not load; keeping the current registry");
             return;
         }
 
@@ -316,6 +406,7 @@ public sealed class TerminalSession : IDisposable
 
         Registry = fresh;
         _status.ReplaceGlobalRules(fresh.GlobalStatusRules);
+        _mru.Prune(fresh.Terminals.Select(t => t.Name).ToHashSet(StringComparer.Ordinal));
 
         foreach (var name in removed)
         {
@@ -333,6 +424,22 @@ public sealed class TerminalSession : IDisposable
         ReapplyTaskbarVisibility();
         RegistryChanged?.Invoke();
         _log.LogInformation("Registry reloaded: {Count} terminals", fresh.Terminals.Count);
+    }
+
+    /// <summary>
+    /// Remembers the picker's launch directory (R21, ADR-0017). Quiet-save like
+    /// <see cref="RememberHwnd"/>: no RegistryChanged — nothing UI-visible changed, and the
+    /// registry stays the only durable store (invariant 3).
+    /// </summary>
+    public Task RememberLastDirectoryAsync(string directory)
+    {
+        if (Registry.QuickLaunch.LastDirectory == directory)
+        {
+            return Task.CompletedTask;
+        }
+
+        Registry = Registry with { QuickLaunch = Registry.QuickLaunch with { LastDirectory = directory } };
+        return SaveQuietlyAsync();
     }
 
     private Task PersistAsync()
@@ -496,6 +603,7 @@ public sealed class TerminalSession : IDisposable
     {
         _status.WindowGone(tw.Name);
         _motion.Forget(tw.Name); // a relaunch under this name starts from a fresh baseline
+        _mru.Forget(tw.Name); // recency is a live-window notion; a relaunch re-earns its place
         if (Definition(tw.Name) is { Persistent: false })
         {
             try
@@ -514,13 +622,10 @@ public sealed class TerminalSession : IDisposable
         var previous = _foregroundName;
         _foregroundName = tw?.Name;
 
-        if (previous is not null && previous != _foregroundName)
+        if (previous is not null && previous != _foregroundName
+            && _tracker.Find(previous) is { } prevWin && Definition(previous) is { } prevDef)
         {
-            _previousForegroundName = previous;
-            if (_tracker.Find(previous) is { } prevWin && Definition(previous) is { } prevDef)
-            {
-                _colorizer.Apply(prevWin.Hwnd, prevDef.Color, focused: false);
-            }
+            _colorizer.Apply(prevWin.Hwnd, prevDef.Color, focused: false);
         }
 
         if (tw is not null && Definition(tw.Name) is { } def)
@@ -529,12 +634,32 @@ public sealed class TerminalSession : IDisposable
             _status.Focused(tw.Name);
         }
 
+        // Recency: the walk's own activations wait for the session to settle; any other
+        // foreground change ends a live walk without committing it (ADR-0015).
+        if (tw is not null && tw.Name == _cycleTarget && _cycleSnapshot is not null)
+        {
+            // no touch — CommitCycle will touch the terminal the walk lands on
+        }
+        else
+        {
+            if (_cycleSnapshot is not null)
+            {
+                AbortCycle();
+            }
+
+            if (tw is not null)
+            {
+                _mru.Touch(tw.Name);
+            }
+        }
+
         ForegroundChanged?.Invoke(_foregroundName);
     }
 
     public void Dispose()
     {
         _tick.Stop();
+        _cycleTimer.Stop();
         ResetColors();
         foreach (var tw in _tracker.Tracked)
         {
