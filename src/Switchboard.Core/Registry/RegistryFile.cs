@@ -36,6 +36,16 @@ public enum ScreenEdge
     Right,
 }
 
+/// <summary>How the top-edge strip and rail span the screen (ADR-0012 as amended).</summary>
+public enum TopWidthMode
+{
+    /// <summary>Span the full work-area width.</summary>
+    Full,
+
+    /// <summary>Only as wide as the terminal content, centered; strip and rail align.</summary>
+    Centered,
+}
+
 public sealed record StripSettings
 {
     public ScreenEdge Edge { get; init; } = ScreenEdge.Top;
@@ -65,6 +75,14 @@ public sealed record StripSettings
     /// <summary>Rail height in DIPs when docked to the top edge. Sized to fit one stacked
     /// card: 115-dip thumb + meta rows + card and scroller padding.</summary>
     public int RailTopHeightDips { get; init; } = 190;
+
+    /// <summary>
+    /// Top-edge width: full screen, or only as wide as the terminals and centered. The
+    /// strip and the rail both follow it so the bar and the slide-down tray always align.
+    /// App-bar mode (<see cref="ReserveScreenSpace"/>) is always full width — a reserved
+    /// band spans the whole edge by nature.
+    /// </summary>
+    public TopWidthMode TopWidth { get; init; } = TopWidthMode.Centered;
 
     /// <summary>App-bar mode: reserve the strip's pixels so maximized windows stop at it.</summary>
     public bool ReserveScreenSpace { get; init; }
