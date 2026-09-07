@@ -56,6 +56,50 @@ public class StripPlacementTests
     }
 
     [Fact]
+    public void Top_edge_hugs_its_content_and_centers_in_the_work_area()
+    {
+        var rect = StripPlacement.Compute(
+            Monitor(100, 50, 2560, 1400), ScreenEdge.Top, thicknessDips: 8, contentLengthDips: 900);
+        Assert.Equal(new PixelRect(100 + ((2560 - 900) / 2), 50, 900, 8), rect);
+    }
+
+    [Fact]
+    public void Top_edge_content_wider_than_the_work_area_clamps_to_full_width()
+    {
+        var rect = StripPlacement.Compute(
+            Monitor(0, 0), ScreenEdge.Top, thicknessDips: 8, contentLengthDips: 5000);
+        Assert.Equal(new PixelRect(0, 0, 1920, 8), rect);
+    }
+
+    [Fact]
+    public void Top_edge_content_length_scales_with_monitor_dpi()
+    {
+        var rect = StripPlacement.Compute(
+            Monitor(0, 0, scale: 1.5), ScreenEdge.Top, thicknessDips: 8, contentLengthDips: 400);
+        Assert.Equal(new PixelRect((1920 - 600) / 2, 0, 600, 12), rect);
+    }
+
+    [Fact]
+    public void Collapsed_sliver_keeps_the_centered_content_width()
+    {
+        // Only thickness animates on collapse; the bar must not jump sideways.
+        var monitor = Monitor(0, 0);
+        var open = StripPlacement.Compute(monitor, ScreenEdge.Top, thicknessDips: 8, contentLengthDips: 900);
+        var sliver = StripPlacement.Compute(monitor, ScreenEdge.Top, thicknessDips: 2, contentLengthDips: 900);
+        Assert.Equal(open.X, sliver.X);
+        Assert.Equal(open.Width, sliver.Width);
+        Assert.Equal(2, sliver.Height);
+    }
+
+    [Fact]
+    public void Side_edges_ignore_the_content_length()
+    {
+        var rect = StripPlacement.Compute(
+            Monitor(0, 0), ScreenEdge.Left, thicknessDips: 8, contentLengthDips: 900);
+        Assert.Equal(new PixelRect(0, 0, 8, 1040), rect);
+    }
+
+    [Fact]
     public void Left_edge_spans_work_area_height()
     {
         var monitor = Monitor(0, 0, 1920, 1040);
