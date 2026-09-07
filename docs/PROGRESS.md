@@ -55,6 +55,8 @@ M3 code-complete on branch `m3-switcher-picker` (built on `rail-stacked-thumbs`,
 - Slice 4: `quickLaunch.lastDirectory` (additive, no version bump) + `TerminalSession.RememberLastDirectoryAsync` via the `RememberHwnd` quiet-save path. Fallback applies only on actual launches — adopt seeds don't inherit a directory. Nonexistent dirs dropped with a warning, never a failed launch; WSL paths skip the check.
 - 108/108 tests (20 new: MruList 6, FuzzyMatcher 7, WtSettingsReader 6, store round-trip 1). CLAUDE.md staleness fixed (`RegisterAll` → `Rebind`, milestone section); PRD R16/R21/R22 and ROADMAP M3 updated.
 - Not verified on hardware: all four M3 slice checklists above. First thing to check is that the switcher's filter box actually types (foreground-lock risk, ADR-0016 Consequences).
+- Slide-animation smoothness pass (03758ff): both slide timers were Background-priority DispatcherTimers, starved exactly when the rail's opening slide triggers layout/thumbnail work; new shared `WindowSlide` ticks on `CompositionTarget.Rendering` (vsync-aligned). Rail's position-only slide now passes `SWP_NOSIZE` (skips layered-window surface reallocation); mid-slide reversals start from the actual current rect instead of snapping. Feel (220 ms ease-out cubic) unchanged.
+- Slide smoothness verified by Jeremy on hardware ("much better").
 
 ### 2026-09-06
 - Registry file renamed `registry.json` → `switchboard.json` (JPC-TODO). Filename only: "registry" stays the product word, so `IRegistryStore`, `RegistryFile`, `RegistryWatcher` and the Core namespace are untouched.
