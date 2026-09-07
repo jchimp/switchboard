@@ -1,6 +1,10 @@
+<img src="assets/icon/switchboard-256.png" alt="" width="96" align="left" hspace="12" />
+
 # Switchboard
 
 A Windows Terminal switchboard: name your terminals, give each one a color, see at a glance which ones are working or waiting on you, and jump to any of them from anywhere — without six entries in the taskbar.
+
+<br clear="left" />
 
 ## What it does
 
@@ -40,6 +44,8 @@ tests/
 docs/
   PRD.md, ROADMAP.md, adr/   product, plan, and the decisions behind the shape of the code.
   design/                    the interactive mockups the UI is built from.
+assets/
+  icon/                      app icon — switchboard.ico is the exe icon, .svg is the source.
 ```
 
 ## How a registry row becomes a window
