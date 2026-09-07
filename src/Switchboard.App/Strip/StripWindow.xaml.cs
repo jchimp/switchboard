@@ -6,6 +6,7 @@ using System.Windows.Interop;
 using Switchboard.App.Rail;
 using Switchboard.App.Services;
 using Switchboard.App.ViewModels;
+using Switchboard.Core.Registry;
 using Switchboard.Core.Screen;
 using Switchboard.Windows;
 
@@ -21,6 +22,7 @@ public partial class StripWindow : Window
     private const int SlideDurationMs = 150;
 
     private readonly StripViewModel _vm;
+    private readonly TerminalSession _session;
     private readonly TaskbarVisibility _taskbarVisibility;
     private readonly AppBar _appBar;
     private readonly RailWindow _rail;
@@ -37,6 +39,7 @@ public partial class StripWindow : Window
         TerminalSession session, RailWindow rail)
     {
         _vm = vm;
+        _session = session;
         _taskbarVisibility = taskbarVisibility;
         _appBar = appBar;
         _rail = rail;
@@ -57,6 +60,11 @@ public partial class StripWindow : Window
             }
         };
         vm.Items.CollectionChanged += (_, _) => Dock();
+
+        // In Centered mode the bar's width tracks the registry's terminal count, which can
+        // change without changing the visible segments (a Closed terminal added while
+        // ShowClosedTerminals is off) — and a hot-reload can flip TopWidth itself.
+        session.RegistryChanged += () => Dock();
         vm.PropertyChanged += OnViewModelPropertyChanged;
 
         // Display changes arrive in bursts (one WM_SETTINGCHANGE per work-area tweak);
@@ -302,8 +310,10 @@ public partial class StripWindow : Window
 
         if (s.ReserveScreenSpace)
         {
-            // App-bar mode: propose from the full monitor bounds and occupy whatever the
-            // shell grants; the work area would include our own band and drift (ADR-0011).
+            // App-bar mode is always full width — a reserved band spans the whole edge by
+            // nature, so TopWidth doesn't apply here.
+            // Propose from the full monitor bounds and occupy whatever the shell grants;
+            // the work area would include our own band and drift (ADR-0011).
             var granted = _appBar.Apply(
                 hwnd, s.Edge, StripPlacement.ComputeAppBar(monitor, s.Edge, s.Thickness));
             _slide.Stop();
@@ -313,7 +323,16 @@ public partial class StripWindow : Window
 
         _appBar.Remove();
         var thickness = _collapsed ? Math.Min(s.HiddenThickness, s.Thickness) : s.Thickness;
-        var rect = StripPlacement.Compute(monitor, s.Edge, thickness);
+
+        // Centered mode: the bar spans the same content width as the rail, so the two line
+        // up. The count comes from the registry, not _vm.Items — the rail always shows
+        // every registered terminal, while the strip hides Closed ones under
+        // ShowClosedTerminals, and a mismatch there would misalign the bar and the tray.
+        // The collapsed sliver keeps the same width; only thickness animates.
+        int? length = _vm.IsVertical || s.TopWidth == TopWidthMode.Full
+            ? null
+            : RailMetrics.ContentLengthDips(_session.Registry.Terminals.Count);
+        var rect = StripPlacement.Compute(monitor, s.Edge, thickness, length);
 
         if (animate && _currentRect is { } from && from != rect)
         {
