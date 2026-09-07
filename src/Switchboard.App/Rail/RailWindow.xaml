@@ -86,7 +86,7 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="{x:Type vm:RailItemViewModel}">
-              <Border x:Name="Card" Width="{x:Static rail:RailWindow.CardWidthDips}"
+              <Border x:Name="Card" Width="{x:Static rail:RailMetrics.CardWidthDips}"
                       Margin="0,3" Padding="6" CornerRadius="6"
                       BorderThickness="1" BorderBrush="Transparent" Background="Transparent"
                       Opacity="{Binding RowOpacity}" Cursor="Hand"
