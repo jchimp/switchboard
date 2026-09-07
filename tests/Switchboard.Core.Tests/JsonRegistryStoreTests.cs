@@ -53,7 +53,21 @@ public sealed class JsonRegistryStoreTests : IDisposable
         Assert.Equal(800, loaded.Strip.CollapseDelayMs);
         Assert.Equal(236, loaded.Strip.RailSizeDips);
         Assert.Equal(190, loaded.Strip.RailTopHeightDips);
+        Assert.Equal(TopWidthMode.Centered, loaded.Strip.TopWidth);
         Assert.True(loaded.ThumbnailMotionEnabled);
+    }
+
+    [Fact]
+    public async Task Top_width_mode_round_trips()
+    {
+        var store = new JsonRegistryStore(PathFor("switchboard.json"));
+        await store.SaveAsync(new RegistryFile
+        {
+            Strip = new StripSettings { TopWidth = TopWidthMode.Full },
+        });
+
+        var loaded = await store.LoadAsync();
+        Assert.Equal(TopWidthMode.Full, loaded.Strip.TopWidth);
     }
 
     [Fact]
