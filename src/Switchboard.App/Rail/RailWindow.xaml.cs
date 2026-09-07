@@ -6,6 +6,7 @@ using System.Windows.Media;
 using Microsoft.Extensions.Logging;
 using Switchboard.App.Services;
 using Switchboard.App.ViewModels;
+using Switchboard.Core.Registry;
 using Switchboard.Core.Screen;
 using Switchboard.Windows;
 using Switchboard.Windows.Tracking;
@@ -19,15 +20,7 @@ namespace Switchboard.App.Rail;
 /// </summary>
 public partial class RailWindow : Window, IDisposable
 {
-    /// <summary>Card width in DIPs; the XAML card template binds to this so the two can't drift.</summary>
-    public const double CardWidthDips = 216;
-
     private const int SlideDurationMs = 220;
-
-    // Chrome around the top-edge card row, in DIPs: the foot column ApplyOrientation docks
-    // right, the ListScroller's 8+8 padding, and the window border (1 each side).
-    private const double FootColumnWidthDips = 250;
-    private const double TopEdgeChromeDips = 16 + 2;
 
     private readonly RailViewModel _vm;
     private readonly TerminalSession _session;
@@ -210,7 +203,7 @@ public partial class RailWindow : Window, IDisposable
         // section alone would squeeze the card list to nothing. Concept A rotates the foot
         // into a right-hand column there.
         DockPanel.SetDock(FootSection, vertical ? Dock.Bottom : Dock.Right);
-        FootSection.Width = vertical ? double.NaN : FootColumnWidthDips;
+        FootSection.Width = vertical ? double.NaN : RailMetrics.FootColumnWidthDips;
     }
 
     private PixelRect ReverseTarget() =>
@@ -234,11 +227,12 @@ public partial class RailWindow : Window, IDisposable
         var vertical = RailPlacement.IsVertical(s.Edge);
         var size = vertical ? s.RailSizeDips : s.RailTopHeightDips;
 
-        // The top drop-down hugs its content and centers (ADR-0012 as amended); side rails
-        // stay full-height, so no content length there.
-        int? length = vertical
+        // In Centered mode the top drop-down hugs its content (ADR-0012 as amended) and the
+        // strip follows the same width; Full spans the screen. Side rails are full-height,
+        // so no content length there either way.
+        int? length = vertical || s.TopWidth == TopWidthMode.Full
             ? null
-            : (int)Math.Ceiling(_vm.Items.Count * CardWidthDips + FootColumnWidthDips + TopEdgeChromeDips);
+            : RailMetrics.ContentLengthDips(_vm.Items.Count);
         var monitor = StripPlacement.SelectMonitor(monitors, s.Monitor);
         return (
             RailPlacement.Compute(monitor, s.Edge, 0, size, length),
