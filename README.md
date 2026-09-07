@@ -1,5 +1,9 @@
 <img src="assets/icon/switchboard-256.png" alt="" width="96" align="left" hspace="12" />
 
+</br>
+</br>
+</br>
+
 # Switchboard
 
 A Windows Terminal switchboard: name your terminals, give each one a color, see at a glance which ones are working or waiting on you, and jump to any of them from anywhere — without six entries in the taskbar.
