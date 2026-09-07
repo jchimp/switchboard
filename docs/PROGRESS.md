@@ -1,7 +1,7 @@
 # Project Progress
 
 ## Current Focus
-M3 code-complete on branch `m3-switcher-picker` (built on `rail-stacked-thumbs`, which still awaits its own visual check + merge): overlay switcher, quick-launch picker, MRU cycle-recent — ADRs 0015–0017, 108/108 tests. All three M3 slices need hardware verification below. Still open from M2: manual verification of Slices 4 and 6, the motion-sampling CPU number for ADR-0013, and daily use.
+M3 code-complete on branch `m3-switcher-picker` (built on `rail-stacked-thumbs`, which still awaits its own visual check + merge): overlay switcher, quick-launch picker, MRU cycle-recent — ADRs 0015–0017, 119/119 tests. Since then, top-edge width became a setting (`strip.topWidth`, strip and rail together) and `tools/Release.ps1` landed. All M3 slices plus the two width modes need hardware verification below. Still open from M2: manual verification of Slices 4 and 6, the motion-sampling CPU number for ADR-0013, and daily use.
 
 ## M3 Slices
 - [x] Slice 1: MRU list + cycle-recent walk (`MruList` in Core, frozen-snapshot sessions) — ADR-0015; needs manual verify
@@ -43,6 +43,7 @@ M3 code-complete on branch `m3-switcher-picker` (built on `rail-stacked-thumbs`,
 - [ ] Visual check of `rail-stacked-thumbs` branch (both edges), then merge to main
 - [ ] Update `railTopHeightDips` 150 → 190 in the live switchboard.json (old value clips the top-edge cards)
 - [x] Rename `registry.json` → `switchboard.json`, with a one-time read-fallback to the old name
+- [ ] Manual verify `strip.topWidth`: default `centered` → bar and rail same width and centered, both re-fit when a terminal is added/removed; set `"full"` → both span the screen, no restart needed; with `autoHide` on, the collapsed sliver stays centered at the same width (only thickness animates); confirm `reserveScreenSpace` still reserves a full-width band in either mode
 - [ ] Manual verify the rename: restart Switchboard with the old file in place — same terminals, `switchboard.json` appears beside an untouched `registry.json`, hot-reload still fires on a hand-edit
 
 ## Progress Log
@@ -57,6 +58,10 @@ M3 code-complete on branch `m3-switcher-picker` (built on `rail-stacked-thumbs`,
 - Not verified on hardware: all four M3 slice checklists above. First thing to check is that the switcher's filter box actually types (foreground-lock risk, ADR-0016 Consequences).
 - Slide-animation smoothness pass (03758ff): both slide timers were Background-priority DispatcherTimers, starved exactly when the rail's opening slide triggers layout/thumbnail work; new shared `WindowSlide` ticks on `CompositionTarget.Rendering` (vsync-aligned). Rail's position-only slide now passes `SWP_NOSIZE` (skips layered-window surface reallocation); mid-slide reversals start from the actual current rect instead of snapping. Feel (220 ms ease-out cubic) unchanged.
 - Slide smoothness verified by Jeremy on hardware ("much better").
+- Top-edge geometry is now content-width and centered, and it's a setting: `strip.topWidth` = `full` | `centered` (default centered, no version bump). The strip follows the same setting as the rail, so the color bar and the slide-down tray always match — `StripPlacement.Compute` gained the rail's optional content-length parameter and a new App-side `RailMetrics` owns the one width formula both windows (and the XAML card template) read.
+- Two calls worth knowing: the width comes from the registry's terminal count, not the strip's visible segments, because `showClosedTerminals` can hide segments the rail still lists (so the strip now re-docks on `RegistryChanged` too); and app-bar mode stays full-width regardless, since a reserved band spans the whole edge by nature. ADR-0012 amended twice.
+- New `tools/Release.ps1`: publishes Release to `dist/Switchboard-v<version>/`, version from `-Version` or the csproj, refuses to overwrite without `-Force`. `dist/` gitignored. Exercised end-to-end with a throwaway version.
+- 119/119 tests, build and `dotnet format` clean. Not verified on hardware: the two width modes.
 
 ### 2026-09-06
 - Registry file renamed `registry.json` → `switchboard.json` (JPC-TODO). Filename only: "registry" stays the product word, so `IRegistryStore`, `RegistryFile`, `RegistryWatcher` and the Core namespace are untouched.
