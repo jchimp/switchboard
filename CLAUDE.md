@@ -54,7 +54,7 @@ Registry lives at `%APPDATA%\Switchboard\switchboard.json`. A sample is in `docs
 
 ## Things not to do
 
-- Don't add a settings UI before M4; edit the JSON.
+- Settings edits go through `TerminalSession`, never straight to the file, and the settings pages apply live on a debounce (ADR-0018). Don't add a control for a setting the product doesn't read.
 - Don't reach for `--suppressApplicationTitle` globally to "fix" tracking — it kills title-based status. It's per-terminal (`lockTitle`) for a reason (ADR-0003).
 - Don't add WinUI 3. ADR-0001 explains why WPF.
 - Don't introduce a message bus, mediator, or event aggregator. `TerminalSession` events are enough at this size.
@@ -63,4 +63,7 @@ Registry lives at `%APPDATA%\Switchboard\switchboard.json`. A sample is in `docs
 
 ## Current milestone
 
-M3 (overlay switcher + quick-launch picker + MRU cycle-recent), code-complete on branch `m3-switcher-picker` pending hardware verification. M2's Slice 4/6 manual checks are still open too — see `docs/PROGRESS.md` for the live checklist.
+M4 (settings UI), code-complete on branch `m4-settings-ui`: settings window with Terminals /
+Edge strip / Hotkeys / Status rules pages, stolen-chord badges, and bulk import from running
+windows — ADR-0018. M3 is merged. M2's Slice 4/6 manual checks are still open — see
+`docs/PROGRESS.md` for the live checklist.
