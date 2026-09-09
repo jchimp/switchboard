@@ -5,5 +5,19 @@
   <Application.Resources>
     <SolidColorBrush x:Key="StripBackground" Color="#CC0E1016" />
     <SolidColorBrush x:Key="StripSeparator" Color="#66000000" />
+
+    <!-- Settings window surfaces (ADR-0018). The overlays are translucent panels floating over
+         the desktop; the settings window is an opaque app, so it gets the mockup's layered greys. -->
+    <SolidColorBrush x:Key="SettingsApp" Color="#FF202329" />
+    <SolidColorBrush x:Key="SettingsApp2" Color="#FF262A31" />
+    <SolidColorBrush x:Key="SettingsApp3" Color="#FF2D323A" />
+    <SolidColorBrush x:Key="SettingsLine" Color="#FF3A404B" />
+    <SolidColorBrush x:Key="SettingsRowLine" Color="#FF2C313A" />
+    <SolidColorBrush x:Key="SettingsText" Color="#FFEEF1F5" />
+    <SolidColorBrush x:Key="SettingsMuted" Color="#FF9AA3B2" />
+    <SolidColorBrush x:Key="SettingsDim" Color="#FF6B7383" />
+    <SolidColorBrush x:Key="SettingsAccent" Color="#FF4F8EF7" />
+    <SolidColorBrush x:Key="SettingsField" Color="#FF1A1D26" />
+    <SolidColorBrush x:Key="SettingsError" Color="#FFEF6B6B" />
   </Application.Resources>
 </Application>
