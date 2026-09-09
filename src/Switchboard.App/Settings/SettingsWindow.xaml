@@ -1,0 +1,668 @@
+﻿<Window x:Class="Switchboard.App.Settings.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Switchboard.App.ViewModels"
+        xmlns:settings="clr-namespace:Switchboard.App.Settings"
+        Title="Switchboard — Settings"
+        Width="1140" Height="700" MinWidth="900" MinHeight="520"
+        WindowStartupLocation="CenterScreen"
+        Background="#FF202329"
+        TextOptions.TextFormattingMode="Display">
+  <Window.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    <settings:NotBoolConverter x:Key="NotBool" />
+    <vm:SettingsPageNameConverter x:Key="PageName" />
+
+    <Style x:Key="NavItem" TargetType="ListBoxItem">
+      <Setter Property="Foreground" Value="{StaticResource SettingsMuted}" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Margin" Value="0,0,0,2" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Grid>
+              <Border x:Name="Bg" CornerRadius="6" Background="Transparent" Padding="12,8">
+                <ContentPresenter VerticalAlignment="Center" />
+              </Border>
+              <Border x:Name="Marker" Width="3" HorizontalAlignment="Left" Margin="0,9"
+                      CornerRadius="2" Background="Transparent" />
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bg" Property="Background" Value="{StaticResource SettingsApp3}" />
+                <Setter Property="Foreground" Value="{StaticResource SettingsText}" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Bg" Property="Background" Value="{StaticResource SettingsApp3}" />
+                <Setter TargetName="Marker" Property="Background" Value="{StaticResource SettingsAccent}" />
+                <Setter Property="Foreground" Value="{StaticResource SettingsText}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="PageTitle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="18" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="{StaticResource SettingsText}" />
+    </Style>
+
+    <Style x:Key="PageSub" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Foreground" Value="{StaticResource SettingsMuted}" />
+      <Setter Property="Margin" Value="0,2,0,16" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="MaxWidth" Value="640" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+
+    <Style x:Key="FieldLabel" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{StaticResource SettingsMuted}" />
+      <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+
+    <Style x:Key="Hint" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="Foreground" Value="{StaticResource SettingsDim}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Margin" Value="0,4,0,0" />
+    </Style>
+
+    <Style x:Key="Field" TargetType="TextBox">
+      <Setter Property="Background" Value="{StaticResource SettingsField}" />
+      <Setter Property="Foreground" Value="{StaticResource SettingsText}" />
+      <Setter Property="CaretBrush" Value="{StaticResource SettingsText}" />
+      <Setter Property="BorderBrush" Value="{StaticResource SettingsLine}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="7,5" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Margin" Value="0,0,0,11" />
+    </Style>
+
+    <Style x:Key="MonoField" TargetType="TextBox" BasedOn="{StaticResource Field}">
+      <Setter Property="FontFamily" Value="Cascadia Mono,Consolas" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style x:Key="GhostButton" TargetType="Button">
+      <Setter Property="Background" Value="{StaticResource SettingsApp2}" />
+      <Setter Property="Foreground" Value="{StaticResource SettingsText}" />
+      <Setter Property="BorderBrush" Value="{StaticResource SettingsLine}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="11,5" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource GhostButton}">
+      <Setter Property="Background" Value="{StaticResource SettingsAccent}" />
+      <Setter Property="BorderBrush" Value="{StaticResource SettingsAccent}" />
+      <Setter Property="Foreground" Value="#FF0B1020" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Key="SettingsCheck" TargetType="CheckBox">
+      <Setter Property="Foreground" Value="{StaticResource SettingsMuted}" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="196" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <!-- Left nav -->
+    <Border Grid.Column="0" Background="{StaticResource SettingsApp2}"
+            BorderBrush="{StaticResource SettingsLine}" BorderThickness="0,0,1,0">
+      <DockPanel Margin="8,12">
+        <StackPanel DockPanel.Dock="Bottom" Margin="12,0,10,4">
+          <TextBlock Text="switchboard.json" FontSize="11" Foreground="{StaticResource SettingsDim}" />
+          <TextBlock Text="{Binding RegistryPath}" FontSize="10" Foreground="{StaticResource SettingsDim}"
+                     TextTrimming="CharacterEllipsis" ToolTip="{Binding RegistryPath}" />
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Pages}" SelectedItem="{Binding Page}"
+                 Background="Transparent" BorderThickness="0" Focusable="True"
+                 ItemContainerStyle="{StaticResource NavItem}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Converter={StaticResource PageName}}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <Grid Grid.Column="1" Margin="22,18,22,18">
+
+      <!-- ===================== TERMINALS ===================== -->
+      <Grid DataContext="{Binding Terminals}"
+            Visibility="{Binding DataContext.IsTerminals, RelativeSource={RelativeSource AncestorType=Window},
+                         Converter={StaticResource BoolToVis}}">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0">
+          <TextBlock Text="Terminals" Style="{StaticResource PageTitle}" />
+          <TextBlock Style="{StaticResource PageSub}"
+                     Text="One row per named Windows Terminal window. Order here is the order on the strip; jump keys are set per terminal." />
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="330" />
+          </Grid.ColumnDefinitions>
+
+          <DockPanel Grid.Column="0" Margin="0,0,18,0">
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10" LastChildFill="False">
+              <Button DockPanel.Dock="Left" Style="{StaticResource PrimaryButton}" Content="+ Add terminal"
+                      Command="{Binding AddCommand}" />
+              <Button DockPanel.Dock="Left" Style="{StaticResource GhostButton}"
+                      Content="Import from running windows" Command="{Binding ImportCommand}" />
+              <TextBox DockPanel.Dock="Right" Width="150" Style="{StaticResource MonoField}" Margin="0"
+                       VerticalAlignment="Center" ToolTip="Filter by name"
+                       Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" />
+            </DockPanel>
+
+            <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0" LastChildFill="False">
+              <Button DockPanel.Dock="Left" Style="{StaticResource GhostButton}" Content="Move up"
+                      Command="{Binding MoveUpCommand}" IsEnabled="{Binding CanMoveUp}" />
+              <Button DockPanel.Dock="Left" Style="{StaticResource GhostButton}" Content="Move down"
+                      Command="{Binding MoveDownCommand}" IsEnabled="{Binding CanMoveDown}" />
+              <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Content="Delete" Margin="0"
+                      Command="{Binding RemoveCommand}" IsEnabled="{Binding HasSelection}" />
+            </DockPanel>
+
+            <DataGrid ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}"
+                      AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                      Background="Transparent" BorderThickness="0"
+                      GridLinesVisibility="Horizontal"
+                      HorizontalGridLinesBrush="{StaticResource SettingsRowLine}"
+                      Foreground="{StaticResource SettingsText}" FontSize="13"
+                      SelectionMode="Single" CanUserResizeRows="False" CanUserReorderColumns="False"
+                      CanUserSortColumns="False">
+              <DataGrid.ColumnHeaderStyle>
+                <Style TargetType="DataGridColumnHeader">
+                  <Setter Property="Background" Value="Transparent" />
+                  <Setter Property="Foreground" Value="{StaticResource SettingsMuted}" />
+                  <Setter Property="FontSize" Value="12" />
+                  <Setter Property="FontWeight" Value="Normal" />
+                  <Setter Property="Padding" Value="10,6" />
+                  <Setter Property="HorizontalContentAlignment" Value="Left" />
+                  <Setter Property="BorderBrush" Value="{StaticResource SettingsLine}" />
+                  <Setter Property="BorderThickness" Value="0,0,0,1" />
+                </Style>
+              </DataGrid.ColumnHeaderStyle>
+              <DataGrid.CellStyle>
+                <Style TargetType="DataGridCell">
+                  <Setter Property="Background" Value="Transparent" />
+                  <Setter Property="BorderThickness" Value="0" />
+                  <Setter Property="Padding" Value="10,8" />
+                  <Setter Property="Foreground" Value="{StaticResource SettingsText}" />
+                  <Setter Property="Template">
+                    <Setter.Value>
+                      <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                          <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                      </ControlTemplate>
+                    </Setter.Value>
+                  </Setter>
+                </Style>
+              </DataGrid.CellStyle>
+              <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                  <Setter Property="Background" Value="Transparent" />
+                  <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter Property="Background" Value="{StaticResource SettingsApp2}" />
+                    </Trigger>
+                    <Trigger Property="IsSelected" Value="True">
+                      <Setter Property="Background" Value="{StaticResource SettingsApp3}" />
+                    </Trigger>
+                  </Style.Triggers>
+                </Style>
+              </DataGrid.RowStyle>
+              <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Name" Width="*" MinWidth="150">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <StackPanel Orientation="Horizontal">
+                        <Border Width="12" Height="12" CornerRadius="3" Background="{Binding Brush}"
+                                VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Tag" Binding="{Binding Tag}" Width="44">
+                  <DataGridTextColumn.ElementStyle>
+                    <Style TargetType="TextBlock">
+                      <Setter Property="FontFamily" Value="Cascadia Mono,Consolas" />
+                      <Setter Property="FontSize" Value="11" />
+                      <Setter Property="Foreground" Value="{StaticResource SettingsMuted}" />
+                    </Style>
+                  </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Profile" Binding="{Binding Profile}" Width="110">
+                  <DataGridTextColumn.ElementStyle>
+                    <Style TargetType="TextBlock">
+                      <Setter Property="FontFamily" Value="Cascadia Mono,Consolas" />
+                      <Setter Property="FontSize" Value="12" />
+                      <Setter Property="Foreground" Value="{StaticResource SettingsMuted}" />
+                      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                    </Style>
+                  </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTemplateColumn Header="Status" Width="86">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center"
+                                 Fill="{Binding Brush}" Opacity="{Binding StateDotOpacity}" />
+                        <TextBlock Text="{Binding StateText}" FontSize="12" VerticalAlignment="Center"
+                                   Foreground="{StaticResource SettingsMuted}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Key" Width="46">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <Border BorderBrush="{StaticResource SettingsLine}" BorderThickness="1"
+                              CornerRadius="4" Padding="6,1" HorizontalAlignment="Left"
+                              Visibility="{Binding HasJumpKey, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding JumpKeyText}" FontFamily="Cascadia Mono,Consolas"
+                                   FontSize="11" />
+                      </Border>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+          </DockPanel>
+
+          <!-- Editor -->
+          <Border Grid.Column="1" Background="{StaticResource SettingsApp2}"
+                  BorderBrush="{StaticResource SettingsLine}" BorderThickness="1" CornerRadius="8"
+                  Padding="14,12">
+            <Grid>
+              <TextBlock VerticalAlignment="Top"
+                         Text="Select a terminal to edit it, or add one.">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Editor}" Value="{x:Null}">
+                        <Setter Property="Visibility" Value="Visible" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+
+              <ScrollViewer VerticalScrollBarVisibility="Auto" DataContext="{Binding Editor}">
+                <ScrollViewer.Style>
+                  <Style TargetType="ScrollViewer">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </ScrollViewer.Style>
+                <StackPanel Margin="0,0,6,0">
+                  <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <Border Width="14" Height="14" CornerRadius="3" Background="{Binding Swatch}"
+                            VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
+                               FontFamily="Cascadia Mono,Consolas"
+                               Foreground="{StaticResource SettingsText}" VerticalAlignment="Center" />
+                  </StackPanel>
+
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="10" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                      <TextBlock Text="Name" Style="{StaticResource FieldLabel}" />
+                      <TextBox Style="{StaticResource Field}"
+                               Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                      <TextBlock Text="Tag" Style="{StaticResource FieldLabel}" />
+                      <TextBox Style="{StaticResource MonoField}" MaxLength="2"
+                               Text="{Binding Tag, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+                  </Grid>
+
+                  <TextBlock Text="Color" Style="{StaticResource FieldLabel}" />
+                  <ItemsControl ItemsSource="{Binding Palette}" Margin="0,0,0,11">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Button Width="24" Height="24" Margin="0,0,6,6" Cursor="Hand"
+                                Command="{Binding DataContext.SelectColorCommand,
+                                          RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}">
+                          <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                              <Border x:Name="Ring" CornerRadius="5" BorderThickness="2"
+                                      BorderBrush="Transparent"
+                                      Background="{Binding Brush}" />
+                              <ControlTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                  <Setter TargetName="Ring" Property="BorderBrush" Value="White" />
+                                </DataTrigger>
+                              </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                          </Button.Template>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <TextBlock Text="Windows Terminal profile" Style="{StaticResource FieldLabel}" />
+                  <TextBox Style="{StaticResource Field}"
+                           Text="{Binding Profile, UpdateSourceTrigger=PropertyChanged}" />
+
+                  <TextBlock Text="Shell" Style="{StaticResource FieldLabel}" />
+                  <ComboBox ItemsSource="{Binding Shells}" SelectedItem="{Binding Shell}"
+                            FontSize="13" Margin="0,0,0,11" />
+
+                  <StackPanel Visibility="{Binding IsWsl, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="WSL distro" Style="{StaticResource FieldLabel}" />
+                    <TextBox Style="{StaticResource MonoField}"
+                             Text="{Binding Distro, UpdateSourceTrigger=PropertyChanged}" />
+                  </StackPanel>
+
+                  <TextBlock Text="Working directory" Style="{StaticResource FieldLabel}" />
+                  <TextBox Style="{StaticResource MonoField}"
+                           Text="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged}" />
+
+                  <TextBlock Text="Run on launch (optional)" Style="{StaticResource FieldLabel}" />
+                  <TextBox Style="{StaticResource MonoField}"
+                           Text="{Binding Command, UpdateSourceTrigger=PropertyChanged}" />
+
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="10" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                      <TextBlock Text="Jump key" Style="{StaticResource FieldLabel}" />
+                      <TextBox Style="{StaticResource MonoField}"
+                               Text="{Binding JumpKeyText, UpdateSourceTrigger=LostFocus}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                      <TextBlock Text="Window name (wt -w)" Style="{StaticResource FieldLabel}" />
+                      <TextBox Style="{StaticResource MonoField}" IsReadOnly="True" Focusable="False"
+                               Foreground="{StaticResource SettingsDim}"
+                               Text="{Binding WindowName, Mode=OneWay}" />
+                    </StackPanel>
+                  </Grid>
+
+                  <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding Persistent}"
+                            Content="Keep in the registry when the window closes" />
+                  <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding LockTitle}"
+                            Content="Lock the window title" Margin="0,0,0,2" />
+                  <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12"
+                             Text="Rock-solid tracking, but title-based status rules never fire for this terminal (ADR-0003)." />
+
+                  <TextBlock Text="Status rules — title regex → state" Style="{StaticResource FieldLabel}" />
+                  <ItemsControl ItemsSource="{Binding Rules}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <StackPanel Margin="0,0,0,6">
+                          <DockPanel>
+                            <ComboBox DockPanel.Dock="Left" Width="88" Margin="0,0,6,0" FontSize="12"
+                                      ItemsSource="{Binding States}" SelectedItem="{Binding State}" />
+                            <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}"
+                                    Content="✕" Margin="6,0,0,0" Padding="7,2"
+                                    Command="{Binding DataContext.RemoveRuleCommand,
+                                              RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}" />
+                            <TextBox Style="{StaticResource MonoField}" Margin="0"
+                                     Text="{Binding Pattern, UpdateSourceTrigger=PropertyChanged}" />
+                          </DockPanel>
+                          <TextBlock Foreground="{StaticResource SettingsError}" FontSize="11"
+                                     TextWrapping="Wrap" Text="{Binding Error}"
+                                     Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <Button Style="{StaticResource GhostButton}" Content="+ Add rule"
+                          HorizontalAlignment="Left" Command="{Binding AddRuleCommand}" />
+                  <TextBlock Style="{StaticResource Hint}"
+                             Text="Evaluated top to bottom on every title change. Global rules run after these." />
+
+                  <TextBlock Foreground="{StaticResource SettingsError}" FontSize="12" TextWrapping="Wrap"
+                             Margin="0,10,0,0" Text="{Binding Error}"
+                             Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}" />
+
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                    <Button Style="{StaticResource GhostButton}" Content="Launch"
+                            Command="{Binding LaunchCommand}" />
+                    <Button Style="{StaticResource PrimaryButton}" Content="Save" Margin="0"
+                            Command="{Binding SaveCommand}" />
+                  </StackPanel>
+                </StackPanel>
+              </ScrollViewer>
+            </Grid>
+          </Border>
+        </Grid>
+      </Grid>
+
+      <!-- ===================== EDGE STRIP ===================== -->
+      <ScrollViewer DataContext="{Binding Strip}" VerticalScrollBarVisibility="Auto"
+                    Visibility="{Binding DataContext.IsStrip, RelativeSource={RelativeSource AncestorType=Window},
+                                 Converter={StaticResource BoolToVis}}">
+        <StackPanel MaxWidth="620" HorizontalAlignment="Left" Margin="0,0,12,0">
+          <TextBlock Text="Edge strip" Style="{StaticResource PageTitle}" />
+          <TextBlock Style="{StaticResource PageSub}"
+                     Text="The always-visible glance layer. One segment per terminal; the active one glows, a terminal that wants attention pulses until you focus it." />
+
+          <TextBlock Text="Screen edge" Style="{StaticResource FieldLabel}" />
+          <ComboBox ItemsSource="{Binding Edges}" SelectedItem="{Binding Edge}"
+                    FontSize="13" Width="160" HorizontalAlignment="Left" Margin="0,0,0,12" />
+
+          <TextBlock Text="Monitor (0 = primary, then left to right)" Style="{StaticResource FieldLabel}" />
+          <TextBox Style="{StaticResource MonoField}" Width="80" HorizontalAlignment="Left"
+                   Text="{Binding Monitor, UpdateSourceTrigger=LostFocus}" />
+
+          <StackPanel Visibility="{Binding IsTopEdge, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="Top-edge width" Style="{StaticResource FieldLabel}" />
+            <ComboBox ItemsSource="{Binding TopWidths}" SelectedItem="{Binding TopWidth}"
+                      FontSize="13" Width="160" HorizontalAlignment="Left" Margin="0,0,0,4" />
+            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12"
+                       Text="Centred keeps the bar and the slide-down rail the same width. App-bar mode is always full width." />
+          </StackPanel>
+
+          <TextBlock Style="{StaticResource FieldLabel}">
+            <Run Text="Thickness" /><Run Text=" — " /><Run Text="{Binding Thickness, Mode=OneWay}" /><Run Text=" px" />
+          </TextBlock>
+          <Slider Minimum="{Binding MinThickness}" Maximum="{Binding MaxThickness}"
+                  Value="{Binding Thickness}" IsSnapToTickEnabled="True" TickFrequency="1"
+                  Width="260" HorizontalAlignment="Left" Margin="0,0,0,14" />
+
+          <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding ReserveScreenSpace}"
+                    Content="Reserve screen space (app-bar mode)" Margin="0,0,0,2" />
+          <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12"
+                     Text="Maximised windows stop at the strip. Always full width, and auto-hide is ignored while it is on." />
+
+          <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding HideOverFullscreen}"
+                    Content="Hide over fullscreen apps" />
+          <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding ShowClosedTerminals}"
+                    Content="Show closed terminals (dimmed; click launches)" />
+          <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding HideFromTaskbar}"
+                    Content="Hide bound windows from the taskbar" Margin="0,0,0,2" />
+          <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,14"
+                     Text="Buttons return when a window is unbound, when this is turned off, and on exit." />
+
+          <TextBlock Text="Auto-hide" FontSize="14" FontWeight="SemiBold" Margin="0,4,0,8"
+                     Foreground="{StaticResource SettingsText}" />
+          <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding AutoHide}"
+                    Content="Collapse to a sliver when the cursor leaves"
+                    IsEnabled="{Binding AppBarOverrides, Converter={StaticResource NotBool}}" />
+          <TextBlock Style="{StaticResource Hint}" Margin="0,-6,0,10"
+                     Text="Ignored while app-bar mode is on — a reserved band cannot collapse."
+                     Visibility="{Binding AppBarOverrides, Converter={StaticResource BoolToVis}}" />
+
+          <TextBlock Style="{StaticResource FieldLabel}">
+            <Run Text="Sliver thickness" /><Run Text=" — " /><Run Text="{Binding HiddenThickness, Mode=OneWay}" /><Run Text=" px" />
+          </TextBlock>
+          <Slider Minimum="1" Maximum="{Binding Thickness}" Value="{Binding HiddenThickness}"
+                  IsSnapToTickEnabled="True" TickFrequency="1"
+                  Width="260" HorizontalAlignment="Left" Margin="0,0,0,12" />
+
+          <TextBlock Style="{StaticResource FieldLabel}">
+            <Run Text="Collapse delay" /><Run Text=" — " /><Run Text="{Binding CollapseDelayMs, Mode=OneWay}" /><Run Text=" ms" />
+          </TextBlock>
+          <Slider Minimum="0" Maximum="{Binding MaxCollapseDelayMs}" Value="{Binding CollapseDelayMs}"
+                  IsSnapToTickEnabled="True" TickFrequency="50"
+                  Width="260" HorizontalAlignment="Left" Margin="0,0,0,14" />
+
+          <TextBlock Text="Rail" FontSize="14" FontWeight="SemiBold" Margin="0,4,0,8"
+                     Foreground="{StaticResource SettingsText}" />
+          <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding OpenRailOnHover}"
+                    Content="Open the rail when the cursor reaches the strip" />
+
+          <TextBlock Style="{StaticResource FieldLabel}">
+            <Run Text="Hover delay" /><Run Text=" — " /><Run Text="{Binding HoverOpenDelayMs, Mode=OneWay}" /><Run Text=" ms" />
+          </TextBlock>
+          <Slider Minimum="0" Maximum="{Binding MaxHoverOpenDelayMs}" Value="{Binding HoverOpenDelayMs}"
+                  IsSnapToTickEnabled="True" TickFrequency="25"
+                  Width="260" HorizontalAlignment="Left" Margin="0,0,0,12" />
+
+          <TextBlock Style="{StaticResource FieldLabel}">
+            <Run Text="Rail width on a side edge" /><Run Text=" — " /><Run Text="{Binding RailSizeDips, Mode=OneWay}" /><Run Text=" dip" />
+          </TextBlock>
+          <Slider Minimum="{Binding MinRailSizeDips}" Maximum="{Binding MaxRailSizeDips}"
+                  Value="{Binding RailSizeDips}" IsSnapToTickEnabled="True" TickFrequency="2"
+                  Width="260" HorizontalAlignment="Left" Margin="0,0,0,12" />
+
+          <TextBlock Style="{StaticResource FieldLabel}">
+            <Run Text="Rail height on the top edge" /><Run Text=" — " /><Run Text="{Binding RailTopHeightDips, Mode=OneWay}" /><Run Text=" dip" />
+          </TextBlock>
+          <Slider Minimum="{Binding MinRailTopHeightDips}" Maximum="{Binding MaxRailTopHeightDips}"
+                  Value="{Binding RailTopHeightDips}" IsSnapToTickEnabled="True" TickFrequency="2"
+                  Width="260" HorizontalAlignment="Left" Margin="0,0,0,4" />
+          <TextBlock Style="{StaticResource Hint}"
+                     Text="Sized to fit one stacked card: a 115-dip thumbnail plus the name row and padding." />
+        </StackPanel>
+      </ScrollViewer>
+
+      <!-- ===================== STATUS RULES ===================== -->
+      <ScrollViewer DataContext="{Binding Status}" VerticalScrollBarVisibility="Auto"
+                    Visibility="{Binding DataContext.IsStatus, RelativeSource={RelativeSource AncestorType=Window},
+                                 Converter={StaticResource BoolToVis}}">
+        <StackPanel MaxWidth="700" HorizontalAlignment="Left" Margin="0,0,12,0">
+          <TextBlock Text="Status rules" Style="{StaticResource PageTitle}" />
+          <TextBlock Style="{StaticResource PageSub}"
+                     Text="Windows Terminal publishes no activity API, so status is inferred from what can be observed from outside the window." />
+
+          <TextBlock Text="Global rules — title regex → state" Style="{StaticResource FieldLabel}" />
+          <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8"
+                     Text="Applied to every terminal after its own rules. First match wins." />
+          <ItemsControl ItemsSource="{Binding Rules}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Margin="0,0,0,6">
+                  <DockPanel>
+                    <ComboBox DockPanel.Dock="Left" Width="100" Margin="0,0,6,0" FontSize="12"
+                              ItemsSource="{Binding States}" SelectedItem="{Binding State}" />
+                    <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}"
+                            Content="✕" Margin="6,0,0,0" Padding="7,2"
+                            Command="{Binding DataContext.RemoveRuleCommand,
+                                      RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                            CommandParameter="{Binding}" />
+                    <TextBox Style="{StaticResource MonoField}" Margin="0" MaxWidth="440"
+                             HorizontalAlignment="Stretch"
+                             Text="{Binding Pattern, UpdateSourceTrigger=PropertyChanged}" />
+                  </DockPanel>
+                  <TextBlock Foreground="{StaticResource SettingsError}" FontSize="11"
+                             TextWrapping="Wrap" Text="{Binding Error}"
+                             Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button Style="{StaticResource GhostButton}" Content="+ Add rule"
+                  HorizontalAlignment="Left" Command="{Binding AddRuleCommand}" />
+          <TextBlock Style="{StaticResource Hint}" Foreground="{StaticResource SettingsError}"
+                     Text="A rule that will not compile is kept on screen but left out of the file."
+                     Visibility="{Binding HasInvalidRule, Converter={StaticResource BoolToVis}}" />
+
+          <TextBlock Text="Sources" FontSize="14" FontWeight="SemiBold" Margin="0,20,0,8"
+                     Foreground="{StaticResource SettingsText}" />
+          <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10"
+                     Text="Window title changes are always on — they are the cheapest signal and the one the rules above read." />
+          <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding ThumbnailMotionEnabled}"
+                    Content="Thumbnail motion" Margin="0,0,0,2" />
+          <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,14"
+                     Text="Samples up to three unfocused windows a second and calls changed pixels Working. Catches long builds that never touch the title." />
+
+          <TextBlock Style="{StaticResource Hint}" Text="{Binding DecaySummary}" />
+        </StackPanel>
+      </ScrollViewer>
+
+      <!-- ===================== HOTKEYS ===================== -->
+      <ScrollViewer DataContext="{Binding Hotkeys}" VerticalScrollBarVisibility="Auto"
+                    Visibility="{Binding DataContext.IsHotkeys, RelativeSource={RelativeSource AncestorType=Window},
+                                 Converter={StaticResource BoolToVis}}">
+        <StackPanel MaxWidth="720" HorizontalAlignment="Left" Margin="0,0,12,0">
+          <TextBlock Text="Hotkeys" Style="{StaticResource PageTitle}" />
+          <TextBlock Style="{StaticResource PageSub}"
+                     Text="Global chords, registered with Windows so they work when you are buried three apps deep. Click a chord and press the keys you want." />
+
+          <ItemsControl ItemsSource="{Binding Rows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid Margin="0,0,0,10">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="230" />
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Text="{Binding Description}" FontSize="13"
+                               Foreground="{StaticResource SettingsText}" TextWrapping="Wrap" />
+                    <TextBlock Foreground="{StaticResource SettingsError}" FontSize="11"
+                               TextWrapping="Wrap" Text="{Binding ProblemText}"
+                               Visibility="{Binding HasProblem, Converter={StaticResource BoolToVis}}" />
+                  </StackPanel>
+                  <TextBox Grid.Column="1" Style="{StaticResource MonoField}" Margin="0"
+                           VerticalAlignment="Center" IsReadOnly="True" Cursor="Hand"
+                           Text="{Binding Chord, Mode=OneWay}"
+                           GotKeyboardFocus="Chord_GotFocus" LostKeyboardFocus="Chord_LostFocus"
+                           PreviewKeyDown="Chord_PreviewKeyDown"
+                           ToolTip="Click, then press the chord. Esc leaves it unchanged." />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
+                     Text="Jump keys are the prefix plus 1–9, and follow the prefix row above. A chord another application already owns is marked here rather than failing silently." />
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</Window>
