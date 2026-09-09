@@ -1,7 +1,24 @@
 # Project Progress
 
 ## Current Focus
+M4 code-complete on branch `m4-settings-ui`: the settings window (Terminals / Edge strip /
+Hotkeys / Status rules), stolen-chord badges, and bulk import from running windows — ADR-0018,
+143/143 tests. Rendering and live-apply were verified by screenshot automation; the four slice
+checklists below still want a human. M3 is merged to main. Still open from M2: manual
+verification of Slices 4 and 6, the motion-sampling CPU number for ADR-0013, and daily use.
+
+### Superseded focus (M3)
 M3 code-complete on branch `m3-switcher-picker` (built on `rail-stacked-thumbs`, which still awaits its own visual check + merge): overlay switcher, quick-launch picker, MRU cycle-recent — ADRs 0015–0017, 119/119 tests. Since then, top-edge width became a setting (`strip.topWidth`, strip and rail together) and `tools/Release.ps1` landed. All M3 slices plus the two width modes need hardware verification below. Still open from M2: manual verification of Slices 4 and 6, the motion-sampling CPU number for ADR-0013, and daily use.
+
+## M4 Slices
+- [x] Slice 1: settings shell + Terminals page (table, editor, add/delete/reorder) — ADR-0018; render-verified by automation
+- [ ] Manual verify Slice 1: open from the strip menu → the window is in the taskbar and Alt-Tab, resizes, dark title bar; rows match the strip's order and colors and the status dots track live state; rename a terminal → Save → the window stays bound (jump hotkey still works), strip relabels; a duplicate name and a bad slug both show inline and do not save; Delete removes it from strip and JSON and its window keeps its taskbar button; Move up/down reorders the strip; close the window → focus is *not* yanked anywhere
+- [x] Slice 2: Edge strip + Status rules pages, live-apply on a 400 ms debounce (`SettingsApplyQueue`, `SettingsBounds`, `StatusRule.ValidatePattern`) — verified end-to-end: two toggles reached switchboard.json with the terminal list intact and a `.bak` kept
+- [ ] Manual verify Slice 2: change edge → the strip moves within a second, no restart; drag Thickness → the strip grows and the file settles ~400 ms after you stop; push Sliver thickness above Thickness → clamped, the strip never disappears; turn on Reserve screen space → maximised windows stop at the strip and the auto-hide note appears; add a global rule and watch a matching title pulse; type an unbalanced `(` → inline error and nothing written; **hand-edit the JSON while the window is open → the page re-syncs and does not fight you**
+- [x] Slice 3: Hotkeys page with chord capture + per-chord Bound/Taken/Unparseable badges (`HotkeyBindings.Status`) — render-verified; closes the "surfacing stolen hotkeys" deferral
+- [ ] Manual verify Slice 3: every chord lists with a correct badge; rebind `openSwitcher` off ``Ctrl+` `` (the VS Code conflict) → the new chord opens the switcher immediately and ``Ctrl+` `` returns to VS Code, no restart; bind something Windows owns → the row says "taken", nothing crashes; change `jumpPrefix` → 1–9 follow it; restart → still bound
+- [x] Slice 4: bulk import from running windows (`TerminalSession.ImportAsync`, `NameSlug`, import dialog) — dialog verified against a real unbound window; **the commit path itself is not yet exercised**
+- [ ] Manual verify Slice 4: open three plain `wt` windows → all three listed with sane names and distinct colors; uncheck one, Import → two are registered, colored, tracked and on the strip, the third untouched; exactly one save in the log; close a window mid-dialog then Import → that row reports "window is gone" and the rest still land; a colliding name shows inline; restart → imported terminals recover by HWND
 
 ## M3 Slices
 - [x] Slice 1: MRU list + cycle-recent walk (`MruList` in Core, frozen-snapshot sessions) — ADR-0015; needs manual verify
@@ -47,6 +64,42 @@ M3 code-complete on branch `m3-switcher-picker` (built on `rail-stacked-thumbs`,
 - [ ] Manual verify the rename: restart Switchboard with the old file in place — same terminals, `switchboard.json` appears beside an untouched `registry.json`, hot-reload still fires on a hand-edit
 
 ## Progress Log
+
+### 2026-09-08 (M4)
+- M4 planned with Jeremy and built on `m4-settings-ui`. Four decisions taken up front: the UI
+  edits only settings that exist in `RegistryFile`; live-apply rather than Save buttons; the
+  named-pipe source leaves M4 (moved to M5); bulk import is in. ADR-0018 records all of it.
+- Consequence of decision 1: the mockup's **Appearance page is not built** — every control on
+  it (title prefix, dim-unfocused, tab color, thumbnail size, theme) has no backing field. The
+  Status page likewise omits the mockup's taskbar-flash and named-pipe toggles: `Flashed` has
+  no caller and the pipe does not exist, so both would have been lies.
+- The settings window is the first activatable window that behaves like a normal app —
+  taskbar, Alt-Tab, resize, and no focus restore on close. Native chrome plus
+  `DWMWA_USE_IMMERSIVE_DARK_MODE` (one new constant, existing P/Invoke) instead of
+  reimplementing the mockup's custom titlebar.
+- `TerminalSession` gained the three writes the UI needed and nothing more:
+  `ApplySettingsAsync` (settings only — it carries the terminal list over untouched so a
+  settings edit cannot stomp a concurrent rename), `ReorderTerminalsAsync`, and `ImportAsync`
+  (whole batch, one save, per-row failures returned).
+- `SettingsApplyQueue` is the live-apply path: edits fold into one pending registry on a 400 ms
+  timer, and `IsApplyingOwnEdit` stops a page reloading from the `RegistryChanged` its own save
+  raised — without it the round trip overwrites the box you are typing in.
+- Three bugs found by driving the real UI rather than trusting the build: fixed columns ate the
+  whole table so the Name column collapsed to nothing; `RowBackground="Transparent"` is a local
+  value that beat the IsSelected trigger, so the selected row never highlighted; and every page
+  rendered on top of every other because `Visibility` and `DataContext` were set on the same
+  element, so `IsStrip` resolved against the page view model and the binding failed silently.
+- The nav started as RadioButtons with a Command; UIA could select one without the page
+  changing, which is also what a keyboard user would have hit. It is a ListBox bound to the
+  page now, so the selection *is* the state and arrow keys work.
+- `%APPDATA%` cannot be sandboxed for tests: `RegistryPaths` goes through
+  `Environment.GetFolderPath`, which ignores the env var. A verification run therefore wrote
+  two settings into the live registry; both were restored, and later runs back the file up
+  first. Worth knowing before anyone writes another UI test.
+- 132 → 143 tests (`SettingsBoundsTests`, `StatusRuleValidationTests`, `NameSlugTests`).
+  Build and `dotnet format` clean.
+- Not verified by a human: the four slice checklists above. The import *commit* in particular
+  has only had its dialog exercised, not its write.
 
 ### 2026-09-06 (M3)
 - M3 planned with Jeremy and implemented in one pass on `m3-switcher-picker` (branched off `rail-stacked-thumbs` so it carries the rename + rail restyle). Decisions: profiles read live from WT's settings.json (not a curated list); switcher grid in registry order with MRU preselect; hold-to-peek deferred.
