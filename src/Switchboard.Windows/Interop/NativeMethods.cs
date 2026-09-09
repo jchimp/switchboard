@@ -12,6 +12,9 @@ internal static partial class NativeMethods
 {
     // ---- DWM -------------------------------------------------------------------
 
+    /// <summary>Win10 2004+/Win11: paints the caption dark. A no-op on older builds.</summary>
+    public const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
     public const int DWMWA_BORDER_COLOR = 34;
     public const uint DWMWA_COLOR_DEFAULT = 0xFFFFFFFF;
     public const uint DWMWA_COLOR_NONE = 0xFFFFFFFE;
