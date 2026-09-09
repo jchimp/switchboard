@@ -17,11 +17,13 @@ public sealed partial class RailViewModel : ObservableObject
 {
     private readonly TerminalSession _session;
     private readonly QuickLaunchService _quick;
+    private readonly SettingsLauncher _settings;
 
-    public RailViewModel(TerminalSession session, QuickLaunchService quick)
+    public RailViewModel(TerminalSession session, QuickLaunchService quick, SettingsLauncher settings)
     {
         _session = session;
         _quick = quick;
+        _settings = settings;
         _session.StateChanged += OnStateChanged;
         _session.RegistryChanged += Sync;
         _session.ForegroundChanged += OnForegroundChanged;
@@ -52,6 +54,9 @@ public sealed partial class RailViewModel : ObservableObject
 
     // The rail covers the strip while open (ADR-0012 as amended), so it carries the same
     // context-menu actions the strip has — otherwise they'd be unreachable under it.
+    [RelayCommand]
+    private void OpenSettings() => _settings.Open();
+
     [RelayCommand]
     private void ReapplyColors() => _session.ReapplyColors();
 
