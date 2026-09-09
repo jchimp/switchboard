@@ -60,6 +60,20 @@ public partial class App : Application
         services.AddSingleton<WtProfileProvider>();
         services.AddSingleton<PickerViewModel>();
         services.AddSingleton<Picker.PickerWindow>();
+        services.AddSingleton<SettingsApplyQueue>();
+        services.AddSingleton<SettingsTerminalsViewModel>();
+        services.AddSingleton<SettingsStripViewModel>();
+        services.AddSingleton<SettingsStatusViewModel>();
+        services.AddSingleton<SettingsHotkeysViewModel>();
+        services.AddSingleton<SettingsViewModel>();
+        // Transient: each import run wants a fresh scan and a clean list.
+        services.AddTransient<ImportViewModel>();
+        // Built by hand: the window takes a factory so each import run gets a fresh scan,
+        // and MS.DI does not resolve Func<T> parameters on its own.
+        services.AddSingleton(sp => new Settings.SettingsWindow(
+            sp.GetRequiredService<SettingsViewModel>(),
+            sp.GetRequiredService<ImportViewModel>));
+        services.AddSingleton(sp => new SettingsLauncher(sp.GetRequiredService<Settings.SettingsWindow>));
         _services = services.BuildServiceProvider();
 
         var log = _services.GetRequiredService<ILogger<App>>();
