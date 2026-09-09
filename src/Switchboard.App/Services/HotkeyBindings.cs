@@ -10,6 +10,22 @@ using Switchboard.Windows.Hotkeys;
 
 namespace Switchboard.App.Services;
 
+/// <summary>What became of one chord at the last <see cref="HotkeyBindings.Rebind"/>.</summary>
+public enum HotkeyOutcome
+{
+    /// <summary>Registered and live.</summary>
+    Bound,
+
+    /// <summary>Windows refused it — another application owns the chord.</summary>
+    Taken,
+
+    /// <summary>The text is not a chord Switchboard can parse.</summary>
+    Unparseable,
+}
+
+/// <summary>The fate of one chord, with a message when there is something to say about it.</summary>
+public sealed record HotkeyState(HotkeyOutcome Outcome, string? Error);
+
 /// <summary>Translates <see cref="HotkeySettings"/> into live registrations.</summary>
 public sealed class HotkeyBindings
 {
@@ -20,6 +36,7 @@ public sealed class HotkeyBindings
     private readonly SwitcherWindow _switcher;
     private readonly PickerWindow _picker;
     private readonly ILogger<HotkeyBindings> _log;
+    private readonly Dictionary<string, HotkeyState> _status = new(StringComparer.Ordinal);
     private HotkeySettings? _bound;
 
     public HotkeyBindings(
@@ -34,6 +51,16 @@ public sealed class HotkeyBindings
         _picker = picker;
         _log = log;
     }
+
+    /// <summary>
+    /// What happened to each chord at the last bind, keyed by the chord text. The settings
+    /// window reads this to show "taken by another app" instead of leaving the user to guess
+    /// why a hotkey does nothing (it was a log-only warning before).
+    /// </summary>
+    public IReadOnlyDictionary<string, HotkeyState> Status => _status;
+
+    /// <summary>Raised after every rebind, so a settings page can refresh its badges.</summary>
+    public event Action? StatusChanged;
 
     /// <summary>One-time hookup to the host window, then the initial bind.</summary>
     public void Attach(Window host)
@@ -57,6 +84,7 @@ public sealed class HotkeyBindings
         }
 
         _hotkeys.UnregisterAll();
+        _status.Clear();
         _bound = h;
         Bind(h.NewTerminal, _picker.Open);
         Bind(h.NewTerminalQuiet, () => Fire(_quick.CreateAndLaunchAsync()));
@@ -71,6 +99,8 @@ public sealed class HotkeyBindings
             var digit = d;
             Bind($"{h.JumpPrefix}+{digit}", () => Fire(_session.ActivateByJumpKeyAsync(digit)));
         }
+
+        StatusChanged?.Invoke();
     }
 
     private void Bind(string chordText, Action action)
@@ -78,10 +108,14 @@ public sealed class HotkeyBindings
         if (!HotkeyChord.TryParse(chordText, out var chord, out var error))
         {
             _log.LogWarning("Skipping hotkey '{Text}': {Error}", chordText, error);
+            _status[chordText] = new HotkeyState(HotkeyOutcome.Unparseable, error);
             return;
         }
 
-        _hotkeys.Register(chord, action);
+        var registered = _hotkeys.Register(chord, action);
+        _status[chordText] = registered
+            ? new HotkeyState(HotkeyOutcome.Bound, null)
+            : new HotkeyState(HotkeyOutcome.Taken, "Another application owns this chord.");
     }
 
     private async void Fire(Task task)
