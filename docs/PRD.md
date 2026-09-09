@@ -60,7 +60,7 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 
 ### Status
 - R18. States: Closed, Idle, Working, Attention. Attention is sticky until the window is focused.
-- R19. Sources, in this order of delivery: title regex rules (per-terminal, then global); taskbar flash; thumbnail motion (M2); named-pipe from the shell (M4, opt-in).
+- R19. Sources, in this order of delivery: title regex rules (per-terminal, then global); taskbar flash; thumbnail motion (M2); named-pipe from the shell (later, opt-in). Title rules and thumbnail motion are live; taskbar flash and the pipe are not yet wired, and the settings UI shows only the sources that exist.
 - R20. Working decays to Idle after 20 s without activity.
 
 ### Taskbar
@@ -69,6 +69,10 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 ### New terminal
 - R21. A new terminal comes from the quick-launch defaults: next free `term-N` name, next unused palette hue, default profile, last-used directory (`quickLaunch.lastDirectory`). `Ctrl+Alt+Shift+N` registers and launches immediately with those defaults, no UI (ADR-0017).
 - R22. `Ctrl+Alt+N` opens the picker: profile via Tab (read live from Windows Terminal's settings.json), directory box, "keep" toggle (Ctrl+K), Enter launches, Esc cancels. Opens fully seeded, so a bare Enter equals the quiet launch (ADR-0017).
+
+### Settings
+- R26. A settings window edits the registry directly: terminals (add, edit, delete, reorder), strip, hotkeys, and global status rules. Edits apply live and persist through the same atomic write as any other change, so hand-editing the file and using the window are the same operation (ADR-0018). It shows only settings the product reads; hotkey rows say when Windows refused a chord.
+- R27. Running Windows Terminal windows that are not bound to a terminal can be imported in bulk from the settings window: proposed name and color per window, edited before committing, registered and bound in one write.
 
 ## Non-functional
 
