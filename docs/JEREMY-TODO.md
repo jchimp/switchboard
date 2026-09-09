@@ -4,6 +4,24 @@ Personal working notes for Jeremy (not for the engine). Skim top-to-bottom.
 
 ### 🔴 Decisions I need from you (I made a call; confirm or override)
 
+- [ ] **M4: the mockup's Appearance page is not built.** You chose "only settings that exist
+  today", and every control on that page (title prefix, dim-frame-when-unfocused, tab-color
+  toggle, rail thumbnail size, theme) has no field behind it. Same reason the Status page has
+  no taskbar-flash or named-pipe toggle: `StatusEngine.Flashed` has no caller and the pipe
+  isn't implemented. The mockup and the shipped window now visibly differ — ADR-0018 is the
+  record of why. Say the word if you'd rather have any of those settings for real.
+- [ ] **The named-pipe status source moved from M4 to M5.** Your call in planning. PRD R19 no
+  longer promises it in M4 and the ROADMAP bullet moved.
+- [ ] **Settings pages apply live; only the terminal editor has a Save button.** A name change
+  rebinds a live window (ADR-0014), which is not something to do per keystroke; everything
+  else writes ~400 ms after you stop fiddling. Consequence: there is no Cancel — closing the
+  window keeps what you changed, exactly like hand-editing the file.
+- [ ] **A verification run wrote to your live switchboard.json.** `%APPDATA%` can't be
+  redirected for the app (`GetFolderPath` ignores the env var), so a test that I thought was
+  sandboxed toggled `hideOverFullscreen` and `showClosedTerminals` off in your real config. I
+  set both back to `true` and later runs back the file up first. Worth a glance at your strip
+  settings to confirm they're as you left them.
+
 - [ ] **M3 sits on top of `rail-stacked-thumbs`, not main.** You said "branch before commit"; your checkout was on `rail-stacked-thumbs` (which still awaits your rail visual check), so I branched `m3-switcher-picker` from it — M3 needs the switchboard.json rename that lives there, and branching from main would have meant a conflict-prone rebase later. Consequence: merging M3 brings the rail restyle and the rename with it. Confirm that's fine, or tell me to rebase M3 onto main after you've merged (or rejected) the rail branch.
 - [ ] **In the switcher, digits 1–9 jump only while the filter box is empty.** The plan said "digits jump"; I noticed terminal names may legally contain digits (`term-2`), so a blanket digit-jump would make those names untypeable in the filter. Once you've typed anything, digits go to the query instead. The alternative is digits-always-jump (purer alt-tab feel, filter loses digit names). It's one condition in `SwitcherWindow.Window_PreviewKeyDown` either way — say the word to flip it.
 - [ ] **The picker's "keep" toggle is Ctrl+K, not Space.** The plan sketched Space-toggles-when-checkbox-focused, but the directory box holds focus and paths contain spaces, so Space must type. Ctrl+K works from anywhere in the picker; the checkbox is also clickable. Confirm, or pick another chord.
@@ -13,6 +31,12 @@ Personal working notes for Jeremy (not for the engine). Skim top-to-bottom.
 - [ ] **Hot-reload suppresses our own saves with a 2-second time mute, not content comparison.** Consequence: a hand-edit you make within ~2 s of an in-app write (e.g. right after Ctrl+Alt+N registers a new terminal) is silently missed until the next change. Content comparison would close that hole but means re-serializing on every event since the registry records don't deep-compare. I judged the race too rare to pay for. Confirm, or tell me to do content hashing instead.
 
 ### 🟡 Human read / acceptance work (do this next)
+
+- [ ] **First M4 check:** right-click the strip → Settings…, then rebind "Open the overlay
+  switcher" off ``Ctrl+` `` (your VS Code conflict from `docs/private/JPC-TODO.md`). Click the
+  chord box and press the keys; it should take effect with no restart. Then run the four M4
+  slice checklists in `docs/PROGRESS.md`.
+- [ ] Skim ADR-0018 — it encodes the four M4 decisions above.
 
 - [ ] **First M3 check, before anything else:** restart Switchboard on `m3-switcher-picker`, press ``Ctrl+` ``, and confirm the filter box actually accepts typed characters. Windows' foreground lock refusing us focus is the one risk that would sink the whole overlay design; `WindowFocuser` should handle it, but only hardware proves it. If it types, run the four M3 slice checklists in `docs/PROGRESS.md` (they're written step-by-step).
 - [ ] Skim ADRs 0015–0017 in `docs/adr/` — cycle-recent snapshot semantics, the overlay activation contract, and the picker/WT-settings decision. They encode the 🔴 items above plus the calls you already made in planning.
@@ -28,7 +52,7 @@ Personal working notes for Jeremy (not for the engine). Skim top-to-bottom.
 - [ ] Hold-to-peek on the switcher → post-M3 (your call in planning: daily use should pick its semantics first; also needs key-up detection we don't have).
 - [ ] `NextName` race on rapid quick-launches (two launches before the first registers could collide, breaking title-binding) → pre-existing, picker naturally serializes; noted, not fixed.
 - [ ] Active-segment thickness growth → M2 (would be new motion; glow already marks active).
-- [ ] Surfacing stolen hotkeys to you (currently a log warning only — at least it's in the file log now) → with the M2 rail UI.
+- [x] Surfacing stolen hotkeys to you (currently a log warning only) → *(Shipped in M4: the Hotkeys page badges every chord Bound / taken by another app / unparseable.)*
 - [ ] `.bak` recovery when switchboard.json is corrupt at startup → you chose the mid-size scope; startup still fails loudly.
 - [x] Last-used-directory memory for quick launch → M3 per PRD R21. *(Shipped this session as `quickLaunch.lastDirectory`.)*
 
