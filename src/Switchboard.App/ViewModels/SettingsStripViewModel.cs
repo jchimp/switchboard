@@ -98,6 +98,9 @@ public sealed partial class SettingsStripViewModel : ObservableObject
     private bool _showClosedTerminals;
 
     [ObservableProperty]
+    private bool _clickMinimizesFocused;
+
+    [ObservableProperty]
     private bool _hideFromTaskbar;
 
     /// <summary>Every page property lands here; one queue entry per edit, coalesced.</summary>
@@ -128,6 +131,7 @@ public sealed partial class SettingsStripViewModel : ObservableObject
                 ReserveScreenSpace = ReserveScreenSpace,
                 HideOverFullscreen = HideOverFullscreen,
                 ShowClosedTerminals = ShowClosedTerminals,
+                ClickMinimizesFocused = ClickMinimizesFocused,
             },
         });
     }
@@ -163,6 +167,7 @@ public sealed partial class SettingsStripViewModel : ObservableObject
             ReserveScreenSpace = strip.ReserveScreenSpace;
             HideOverFullscreen = strip.HideOverFullscreen;
             ShowClosedTerminals = strip.ShowClosedTerminals;
+            ClickMinimizesFocused = strip.ClickMinimizesFocused;
             HideFromTaskbar = registry.HideFromTaskbar;
         }
         finally
