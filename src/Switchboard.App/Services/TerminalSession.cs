@@ -198,8 +198,13 @@ public sealed class TerminalSession : IDisposable
 
     public TerminalState StateOf(string name) => _status.StateOf(name);
 
-    /// <summary>Focus if running, launch if not. The single entry point for "jump to X".</summary>
-    public async Task ActivateAsync(string name)
+    /// <summary>
+    /// Focus if running, launch if not. The single entry point for "jump to X".
+    /// <paramref name="toggleMinimize"/> is true only for strip/rail clicks: when the terminal is
+    /// already foreground and the setting is on, the click minimizes it instead (ADR-0019).
+    /// Hotkey jumps always focus.
+    /// </summary>
+    public async Task ActivateAsync(string name, bool toggleMinimize = false)
     {
         var def = Definition(name);
         if (def is null)
@@ -210,6 +215,14 @@ public sealed class TerminalSession : IDisposable
 
         if (_tracker.Find(name) is { } live)
         {
+            // The strip and rail never activate (invariant 7), so the terminal the user just
+            // clicked is still the foreground window if it was before the click.
+            if (toggleMinimize && Registry.Strip.ClickMinimizesFocused && WindowFocuser.IsForeground(live.Hwnd))
+            {
+                WindowFocuser.Minimize(live.Hwnd);
+                return;
+            }
+
             WindowFocuser.Focus(live.Hwnd);
             return;
         }
