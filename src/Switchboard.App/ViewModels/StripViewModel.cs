@@ -32,7 +32,7 @@ public sealed partial class StripViewModel : ObservableObject
     public bool AnyAttention => Items.Any(i => i.WantsAttention);
 
     [RelayCommand]
-    private Task Activate(TerminalItemViewModel item) => _session.ActivateAsync(item.Name);
+    private Task Activate(TerminalItemViewModel item) => _session.ActivateAsync(item.Name, toggleMinimize: true);
 
     [RelayCommand]
     private void OpenSettings() => _settings.Open();
