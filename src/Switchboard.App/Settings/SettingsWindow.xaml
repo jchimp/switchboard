@@ -512,6 +512,8 @@
                     Content="Hide over fullscreen apps" />
           <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding ShowClosedTerminals}"
                     Content="Show closed terminals (dimmed; click launches)" />
+          <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding ClickMinimizesFocused}"
+                    Content="Clicking the focused terminal minimizes it" />
           <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding HideFromTaskbar}"
                     Content="Hide bound windows from the taskbar" Margin="0,0,0,2" />
           <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,14"
