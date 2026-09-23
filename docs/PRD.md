@@ -48,7 +48,7 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 ### Strip (glance layer)
 - R11. A thin strip on a configurable screen edge (top default; left/right supported) shows one colored segment per registered terminal in registry order.
 - R12. Active terminal's segment glows; Attention pulses; Idle is dimmed; Closed is nearly transparent.
-- R13. Clicking a segment focuses the terminal, or launches it if closed.
+- R13. Clicking a segment focuses the terminal, or launches it if closed. If the terminal is already foreground and `strip.clickMinimizesFocused` is on (default), the click minimizes it instead; hotkey jumps always focus.
 - R14. The strip never takes focus, never appears in Alt-Tab or the taskbar, and optionally reserves its pixels (app-bar mode).
 - R15. Hovering opens the rail (M2).
 - R23. Optionally (`autoHide`, off by default) the strip collapses to a thin sliver (`hiddenThickness`, default 2 px) after the cursor leaves; touching the screen edge slides it back out. Segment colors remain visible in the sliver. Ignored while app-bar mode is on (ADR-0010).
