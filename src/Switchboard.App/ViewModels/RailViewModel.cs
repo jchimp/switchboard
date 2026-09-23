@@ -47,7 +47,7 @@ public sealed partial class RailViewModel : ObservableObject
     private bool RailPlacementIsVertical => Settings.Edge is ScreenEdge.Left or ScreenEdge.Right;
 
     [RelayCommand]
-    private Task Activate(RailItemViewModel item) => _session.ActivateAsync(item.Name);
+    private Task Activate(RailItemViewModel item) => _session.ActivateAsync(item.Name, toggleMinimize: true);
 
     [RelayCommand]
     private Task NewTerminal() => _quick.CreateAndLaunchAsync();
