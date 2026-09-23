@@ -113,6 +113,7 @@ internal static partial class NativeMethods
 
     // ---- Window control ----------------------------------------------------------
 
+    public const int SW_MINIMIZE = 6;
     public const int SW_RESTORE = 9;
 
     [DllImport("user32.dll")]
