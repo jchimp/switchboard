@@ -28,12 +28,29 @@
       <ItemsControl.ItemTemplate>
         <DataTemplate DataType="{x:Type vm:TerminalItemViewModel}">
           <Border x:Name="Seg"
-                  Background="{Binding Brush}"
-                  Opacity="{Binding Opacity}"
+                  Background="{Binding Fill}"
                   BorderBrush="{StaticResource StripSeparator}" BorderThickness="0,0,1,1"
                   ToolTip="{Binding ToolTip}"
                   Cursor="Hand"
                   MouseLeftButtonUp="Segment_Click">
+            <!-- Opacity lives in the style, not as an attribute: a local value would outrank
+                 the trigger. -->
+            <Border.Style>
+              <Style TargetType="Border">
+                <Setter Property="Opacity" Value="{Binding Opacity}" />
+                <Style.Triggers>
+                  <!-- A 2-4 px sliver reads brightness, not hue, so the grey tint alone
+                       looks "on". Closed segments become near-gaps there instead. -->
+                  <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                      <Condition Binding="{Binding IsClosed}" Value="True" />
+                      <Condition Binding="{Binding DataContext.IsCollapsed, RelativeSource={RelativeSource AncestorType=Window}}" Value="True" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Opacity" Value="0.12" />
+                  </MultiDataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Border.Style>
             <Border.Effect>
               <DropShadowEffect ShadowDepth="0" BlurRadius="{Binding GlowRadius}" Color="{Binding Brush.Color}" />
             </Border.Effect>
