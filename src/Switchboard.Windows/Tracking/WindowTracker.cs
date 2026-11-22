@@ -129,9 +129,10 @@ public sealed class WindowTracker : IDisposable
     }
 
     /// <summary>
-    /// Restart recovery, pass 1: re-bind windows by the HWND they were bound to last run.
-    /// Handles survive a manager restart while titles drift; a stale handle (reboot, or the
-    /// window closed) fails <c>IsTerminalWindow</c> and is skipped (ADR-0002 amendment).
+    /// Restart recovery: re-bind windows by the HWND they were bound to last run. Handles
+    /// survive a manager restart while titles drift; a stale handle (reboot, or the window
+    /// closed) fails <c>IsTerminalWindow</c> and is skipped (ADR-0002 amendment). There is no
+    /// title pass: it adopted the user's own one-off windows (ADR-0020).
     /// </summary>
     public int RecoverByHwnd(IEnumerable<(string Name, nint Hwnd)> lastKnown)
     {
@@ -141,29 +142,6 @@ public sealed class WindowTracker : IDisposable
             if (!_byName.ContainsKey(name) && !_byHwnd.ContainsKey(hwnd) && WindowInfo.IsTerminalWindow(hwnd))
             {
                 Bind(name, hwnd);
-                bound++;
-            }
-        }
-
-        return bound;
-    }
-
-    /// <summary>
-    /// Restart recovery, pass 2: bind any visible terminal window whose title *starts with*
-    /// a known name. Best effort; unmatched windows stay unbound and show in the rail.
-    /// </summary>
-    public int RecoverByTitle(IEnumerable<string> names)
-    {
-        var set = names.ToHashSet(StringComparer.Ordinal);
-        var bound = 0;
-        foreach (var hwnd in UnboundTerminalWindows())
-        {
-            var title = WindowInfo.GetTitle(hwnd);
-            var match = set.FirstOrDefault(n => !_byName.ContainsKey(n) &&
-                (title.Equals(n, StringComparison.Ordinal) || title.StartsWith(n + " ", StringComparison.Ordinal)));
-            if (match is not null)
-            {
-                Bind(match, hwnd);
                 bound++;
             }
         }

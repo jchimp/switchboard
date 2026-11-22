@@ -16,3 +16,8 @@ Until the M4 settings UI, editing `switchboard.json` by hand is the sanctioned w
 - Deleting the file empties the strip and unbinds everything — correct by definition, since the registry is the state.
 - The mute window means a hand-edit made within ~2 s of an in-app write can be missed; the next save or edit picks it up.
 - **2026-09-05:** the file was renamed `registry.json` → `switchboard.json`. The store reads the old name once when the new one is absent (`JsonRegistryStore.LegacyDefaultPath`) and `TerminalSession.InitializeAsync` immediately writes the new name, so the watcher — which filters on the current file name — is never left watching a file that does not exist. The old file is left in place, untouched, as a de facto backup.
+
+## Amendment (2026-11-22)
+
+A reload no longer recovers added names by title; that scan adopted unrelated windows
+(ADR-0020). A terminal added while its window is open is adopted from the rail.

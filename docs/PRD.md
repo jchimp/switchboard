@@ -38,7 +38,7 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 ### Launch & tracking
 - R5. Launching a terminal runs `wt.exe` with the profile, cwd, title, tab color, and (if set) the startup command wrapped in the correct shell so the shell survives the command.
 - R6. The manager binds the resulting HWND to the name and tracks it by HWND thereafter.
-- R7. On manager restart, existing WT windows whose title starts with a registered name are re-adopted; the rest are listed as unbound and can be adopted from the rail.
+- R7. On manager restart, windows are re-bound by the HWND each terminal was last bound to. Windows are never adopted by title; any unbound WT window is listed in the rail and can be adopted by hand (ADR-0020).
 - R8. When a bound window closes, its state becomes Closed; throwaway (non-persistent) terminals are removed from the registry.
 
 ### Color

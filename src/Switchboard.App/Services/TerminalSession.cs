@@ -123,14 +123,13 @@ public sealed class TerminalSession : IDisposable
         _tracker.ForegroundChanged += OnForegroundChanged;
         _tracker.Start();
 
-        // HWND first: handles survive a manager restart while titles drift; stale handles
-        // fail validation and fall through to the title pass (ADR-0002 amendment).
+        // Handles survive a manager restart while titles drift (ADR-0002 amendment). No title
+        // pass: it bound the user's own one-off windows; stale handles show as unbound (ADR-0020).
         var byHwnd = _tracker.RecoverByHwnd(Registry.Terminals
             .Select(t => (t.Name, Hwnd: (nint)t.LastHwnd.GetValueOrDefault()))
             .Where(p => p.Hwnd != 0)
             .ToList());
-        var byTitle = _tracker.RecoverByTitle(Registry.Terminals.Select(t => t.Name));
-        _log.LogInformation("Recovered {ByHwnd} windows by handle, {ByTitle} by title", byHwnd, byTitle);
+        _log.LogInformation("Recovered {ByHwnd} windows by handle", byHwnd);
         _tracker.ProbeForeground();
         ReapplyTaskbarVisibility();
 
@@ -562,7 +561,6 @@ public sealed class TerminalSession : IDisposable
             _status.WindowGone(name);
         }
 
-        _tracker.RecoverByTitle(fresh.Terminals.Select(t => t.Name));
         ReapplyColors();
         ReapplyTaskbarVisibility();
         RegistryChanged?.Invoke();
