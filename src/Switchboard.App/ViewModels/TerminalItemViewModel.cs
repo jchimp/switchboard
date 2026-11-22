@@ -13,6 +13,9 @@ public sealed partial class TerminalItemViewModel : ObservableObject
         Definition = definition;
         Brush = (SolidColorBrush)new BrushConverter().ConvertFromString(definition.Color)!;
         Brush.Freeze();
+        // Dormant() always returns #RRGGBB, so the converter can't return null.
+        DormantBrush = (SolidColorBrush)new BrushConverter().ConvertFromString(ColorPalette.Dormant(definition.Color))!;
+        DormantBrush.Freeze();
     }
 
     public TerminalDefinition Definition { get; }
@@ -23,8 +26,13 @@ public sealed partial class TerminalItemViewModel : ObservableObject
 
     public SolidColorBrush Brush { get; }
 
+    public SolidColorBrush DormantBrush { get; }
+
+    /// <summary>Segment fill: the terminal's color, or its greyed-out form while Closed.</summary>
+    public SolidColorBrush Fill => IsClosed ? DormantBrush : Brush;
+
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsClosed), nameof(WantsAttention), nameof(Opacity), nameof(ToolTip))]
+    [NotifyPropertyChangedFor(nameof(IsClosed), nameof(Fill), nameof(WantsAttention), nameof(Opacity), nameof(ToolTip))]
     private TerminalState _state = TerminalState.Closed;
 
     [ObservableProperty]
@@ -41,7 +49,8 @@ public sealed partial class TerminalItemViewModel : ObservableObject
 
     public double Opacity => State switch
     {
-        TerminalState.Closed => 0.28,
+        // Fill already greys a Closed segment; a deep fade on top would lose it against the strip.
+        TerminalState.Closed => 0.6,
         TerminalState.Idle => 0.75,
         _ => 1.0,
     };

@@ -31,6 +31,10 @@ public sealed partial class StripViewModel : ObservableObject
     /// <summary>True while any terminal is in Attention; the auto-hidden strip stays out for it (ADR-0010).</summary>
     public bool AnyAttention => Items.Any(i => i.WantsAttention);
 
+    /// <summary>True while auto-hide has the strip down to its sliver. Set by the window.</summary>
+    [ObservableProperty]
+    private bool _isCollapsed;
+
     [RelayCommand]
     private Task Activate(TerminalItemViewModel item) => _session.ActivateAsync(item.Name, toggleMinimize: true);
 

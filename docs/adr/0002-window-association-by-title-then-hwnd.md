@@ -31,3 +31,9 @@ two passes: `RecoverByHwnd` first (handles survive a manager restart; a stale ha
 a reboot fails `IsTerminalWindow` validation and is skipped), then `RecoverByTitle` for
 whatever remains. Residual risk: a recycled HWND that happens to be a *different* WT window
 mis-binds — vanishingly rare within one logon session, and one click in the rail fixes it.
+
+## Amendment (2026-11-22): title pass removed
+
+`RecoverByTitle` is gone. It bound the user's own one-off windows whose titles happened to
+start with a registered name. Recovery is by `lastHwnd` only; title binding happens only for a
+name Switchboard just launched (`ExpectWindow`). See ADR-0020.

@@ -17,6 +17,8 @@ public sealed record RegistryFile
 
     public QuickLaunchSettings QuickLaunch { get; init; } = new();
 
+    public TerminalHostSettings TerminalHost { get; init; } = new();
+
     /// <summary>Rules applied to every terminal after its own rules. Sensible defaults ship in <see cref="StatusRule.Defaults"/>.</summary>
     public IReadOnlyList<StatusRule> GlobalStatusRules { get; init; } = StatusRule.Defaults;
 
@@ -118,6 +120,17 @@ public sealed record HotkeySettings
 
     /// <summary>Prefix for the always-on 1–9 jump keys; the digit is appended.</summary>
     public string JumpPrefix { get; init; } = "Ctrl+Alt";
+}
+
+/// <summary>Switchboard's private Windows Terminal (ADR-0021).</summary>
+public sealed record TerminalHostSettings
+{
+    /// <summary>
+    /// Folder of a portable WT (<c>wt.exe</c>, <c>WindowsTerminal.exe</c>, <c>.portable</c>).
+    /// Environment variables are expanded. Null means <c>wt.exe</c> on PATH, and then every
+    /// WT window on the desktop can be bound — the pre-0021 behaviour.
+    /// </summary>
+    public string? Folder { get; init; }
 }
 
 public sealed record QuickLaunchSettings

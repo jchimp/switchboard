@@ -10,7 +10,7 @@ Jeremy runs 5–10 Windows Terminal windows at once: PowerShell for ops scripts,
 
 ## Users
 
-One primary user (the author). Secondary: anyone who lives in Windows Terminal with more than four windows open. Not a general "terminal multiplexer" — tmux and WT's own panes cover intra-window layout. Switchboard is the layer *above* WT windows.
+One primary user (the author). Secondary: anyone who lives in Windows Terminal with more than four windows open. Not a general "terminal multiplexer" — tmux and WT's own panes cover intra-window layout. Switchboard is the layer *above* WT windows: a dock for a fixed set of terminals, kept apart from the one-off terminals the user opens from Start or the taskbar (ADR-0021).
 
 ## Goals
 
@@ -36,9 +36,9 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 - R4. Unknown or newer schema versions fail loudly; older versions migrate.
 
 ### Launch & tracking
-- R5. Launching a terminal runs `wt.exe` with the profile, cwd, title, tab color, and (if set) the startup command wrapped in the correct shell so the shell survives the command.
+- R5. Launching a terminal runs `wt.exe` (the terminal host's, R28) with the profile, cwd, title, tab color, and (if set) the startup command wrapped in the correct shell so the shell survives the command.
 - R6. The manager binds the resulting HWND to the name and tracks it by HWND thereafter.
-- R7. On manager restart, existing WT windows whose title starts with a registered name are re-adopted; the rest are listed as unbound and can be adopted from the rail.
+- R7. On manager restart, windows are re-bound by the HWND each terminal was last bound to. Windows are never adopted by title; any unbound WT window is listed in the rail and can be adopted by hand (ADR-0020).
 - R8. When a bound window closes, its state becomes Closed; throwaway (non-persistent) terminals are removed from the registry.
 
 ### Color
@@ -68,11 +68,14 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 
 ### New terminal
 - R21. A new terminal comes from the quick-launch defaults: next free `term-N` name, next unused palette hue, default profile, last-used directory (`quickLaunch.lastDirectory`). `Ctrl+Alt+Shift+N` registers and launches immediately with those defaults, no UI (ADR-0017).
-- R22. `Ctrl+Alt+N` opens the picker: profile via Tab (read live from Windows Terminal's settings.json), directory box, "keep" toggle (Ctrl+K), Enter launches, Esc cancels. Opens fully seeded, so a bare Enter equals the quiet launch (ADR-0017).
+- R22. `Ctrl+Alt+N` opens the picker: profile via Tab (read live from the terminal host's settings.json, or the installed WT's when no host is set), directory box, "keep" toggle (Ctrl+K), Enter launches, Esc cancels. Opens fully seeded, so a bare Enter equals the quiet launch (ADR-0017).
 
 ### Settings
 - R26. A settings window edits the registry directly: terminals (add, edit, delete, reorder), strip, hotkeys, and global status rules. Edits apply live and persist through the same atomic write as any other change, so hand-editing the file and using the window are the same operation (ADR-0018). It shows only settings the product reads; hotkey rows say when Windows refused a chord.
-- R27. Running Windows Terminal windows that are not bound to a terminal can be imported in bulk from the settings window: proposed name and color per window, edited before committing, registered and bound in one write.
+- R27. Running terminal-host windows (R28) that are not bound to a terminal can be imported in bulk from the settings window: proposed name and color per window, edited before committing, registered and bound in one write.
+
+### Terminal host
+- R28. Optionally (`terminalHost.folder`, unset by default) Switchboard runs its terminals in a private portable Windows Terminal in that folder. Only windows whose process is that copy's `WindowsTerminal.exe` can be bound, adopted, imported, or listed as unbound; the user's own WT windows are never touched, and a Start-menu WT can never open a tab in a Switchboard window. Unset: `wt.exe` on PATH and any WT window can be bound (ADR-0021).
 
 ## Non-functional
 

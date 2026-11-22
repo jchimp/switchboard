@@ -23,8 +23,30 @@ Slide-out rail with live thumbnails and the overlay switcher are milestones 2–
 ## Requirements
 
 - Windows 11 (Windows 10 runs, but window frames won't be colored)
-- [Windows Terminal](https://aka.ms/terminal) on `PATH` as `wt.exe`
+- [Windows Terminal](https://aka.ms/terminal): either a private portable copy (recommended, see below) or the installed one on `PATH` as `wt.exe`
 - .NET 8 SDK to build
+
+## Private terminal host (recommended)
+
+Switchboard can run its terminals in its own portable copy of Windows Terminal. That copy is a
+separate process, so Switchboard never touches the terminals you open from Start or the
+taskbar, and those can never open as a tab inside a Switchboard window (ADR-0021).
+
+```powershell
+$dst = "$env:LOCALAPPDATA\Switchboard\wt"
+$tag = gh release view --repo microsoft/terminal --json tagName --jq .tagName   # e.g. v1.25.3131.0
+$ver = $tag.TrimStart('v')
+gh release download $tag --repo microsoft/terminal --clobber --pattern "Microsoft.WindowsTerminal_${ver}_x64.zip" --output "$env:TEMP\wt.zip"
+Expand-Archive "$env:TEMP\wt.zip" "$env:TEMP\wtx" -Force
+New-Item -ItemType Directory $dst -Force | Out-Null
+Copy-Item "$env:TEMP\wtx\*\*" $dst -Recurse -Force
+New-Item "$dst\.portable" -ItemType File -Force | Out-Null
+```
+
+Then set **Settings → Terminals → Terminal host folder** to `%LOCALAPPDATA%\Switchboard\wt`
+(or `"terminalHost": { "folder": "..." }` in `switchboard.json`). The portable copy keeps its
+own profiles in `wt\settings\settings.json`; set up your profiles there. It does not
+auto-update: repeat the steps above to update it.
 
 ## Build & run
 
@@ -58,8 +80,8 @@ assets/
 wt -w anvil new-tab -p Ubuntu --title anvil --tabColor #B07CF5 -- wsl.exe -d Ubuntu --cd ~/anvil -- bash -lic "claude --resume; exec bash -l"
 ```
 
-1. `TerminalSession.LaunchAsync` tells the `WindowTracker` to expect a window titled `anvil`, then runs the command above.
-2. The tracker's WinEvent hook sees a new `CASCADIA_HOSTING_WINDOW_CLASS` window whose title is `anvil` and binds the HWND to the name.
+1. `TerminalSession.LaunchAsync` tells the `WindowTracker` to expect a window titled `anvil`, then runs the command above with the terminal host's `wt.exe`.
+2. The tracker's WinEvent hook sees a new `CASCADIA_HOSTING_WINDOW_CLASS` window whose title is `anvil`, checks that its process is the host's `WindowsTerminal.exe`, and binds the HWND to the name.
 3. `FrameColorizer` sets `DWMWA_BORDER_COLOR` on that HWND. From here on the window is tracked by HWND, so the shell is free to change the title, and those title changes feed the `StatusEngine`.
 
 Details and trade-offs are in `docs/adr/`.

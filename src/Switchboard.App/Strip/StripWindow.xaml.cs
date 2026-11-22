@@ -30,7 +30,6 @@ public partial class StripWindow : Window
     private readonly System.Windows.Threading.DispatcherTimer _collapseTimer;
     private readonly WindowSlide _slide;
     private readonly System.Windows.Threading.DispatcherTimer _hoverOpenTimer;
-    private bool _collapsed;
     private bool _fullscreenHidden;
     private PixelRect? _currentRect;
 
@@ -265,12 +264,12 @@ public partial class StripWindow : Window
 
     private void SetCollapsed(bool collapsed)
     {
-        if (_collapsed == collapsed)
+        if (_vm.IsCollapsed == collapsed)
         {
             return;
         }
 
-        _collapsed = collapsed;
+        _vm.IsCollapsed = collapsed;
         Dock(animate: true);
     }
 
@@ -298,7 +297,7 @@ public partial class StripWindow : Window
         var s = _vm.Settings;
         if (!AutoHideActive)
         {
-            _collapsed = false; // setting toggled off mid-collapse must not strand a sliver
+            _vm.IsCollapsed = false; // setting toggled off mid-collapse must not strand a sliver
         }
 
         if (!s.HideOverFullscreen)
@@ -322,7 +321,7 @@ public partial class StripWindow : Window
         }
 
         _appBar.Remove();
-        var thickness = _collapsed ? Math.Min(s.HiddenThickness, s.Thickness) : s.Thickness;
+        var thickness = _vm.IsCollapsed ? Math.Min(s.HiddenThickness, s.Thickness) : s.Thickness;
 
         // Centered mode: the bar spans the same content width as the rail, so the two line
         // up. The count comes from the registry, not _vm.Items — the rail always shows

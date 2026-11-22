@@ -19,16 +19,23 @@ public static class WtCommandBuilder
 {
     public const string Executable = "wt.exe";
 
-    public static ProcessStartInfo Build(TerminalDefinition def)
+    /// <param name="def">The terminal to launch.</param>
+    /// <param name="executable">The <c>wt.exe</c> to run; the private host's when one is set (ADR-0021).</param>
+    public static ProcessStartInfo Build(TerminalDefinition def, string executable = Executable)
     {
         if (def.Validate() is { } error)
         {
             throw new ArgumentException(error, nameof(def));
         }
 
+        if (string.IsNullOrWhiteSpace(executable))
+        {
+            throw new ArgumentException("A wt.exe path is required.", nameof(executable));
+        }
+
         var psi = new ProcessStartInfo
         {
-            FileName = Executable,
+            FileName = executable,
             UseShellExecute = false,
             CreateNoWindow = true,
         };

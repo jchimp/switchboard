@@ -41,6 +41,7 @@ public partial class App : Application
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IRegistryStore>(_ => new JsonRegistryStore(RegistryPaths.Default, RegistryPaths.Legacy));
         services.AddSingleton(sp => new RegistryWatcher(RegistryPaths.Default, sp.GetRequiredService<TimeProvider>()));
+        services.AddSingleton<TerminalHost>();
         services.AddSingleton<ITerminalLauncher, ProcessTerminalLauncher>();
         services.AddSingleton<FrameColorizer>();
         services.AddSingleton<TaskbarVisibility>();

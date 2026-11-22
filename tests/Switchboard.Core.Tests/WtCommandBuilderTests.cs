@@ -68,4 +68,22 @@ public class WtCommandBuilderTests
         Assert.Contains("Windows PowerShell", psi.ArgumentList);
         Assert.Contains(@"C:\My Stuff", psi.ArgumentList);
     }
+
+    [Fact]
+    public void Executable_comes_from_the_terminal_host_and_arguments_do_not_change()
+    {
+        var host = WtCommandBuilder.Build(Base, @"C:\Users\me\AppData\Local\Switchboard\wt\wt.exe");
+        var path = WtCommandBuilder.Build(Base);
+
+        Assert.Equal(@"C:\Users\me\AppData\Local\Switchboard\wt\wt.exe", host.FileName);
+        Assert.Equal(path.ArgumentList, host.ArgumentList);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Blank_executable_throws(string executable)
+    {
+        Assert.Throws<ArgumentException>(() => WtCommandBuilder.Build(Base, executable));
+    }
 }

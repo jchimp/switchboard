@@ -56,6 +56,35 @@ public sealed class JsonRegistryStoreTests : IDisposable
         Assert.Equal(TopWidthMode.Centered, loaded.Strip.TopWidth);
         Assert.True(loaded.ThumbnailMotionEnabled);
         Assert.True(loaded.Strip.ClickMinimizesFocused);
+        Assert.Null(loaded.TerminalHost.Folder);
+    }
+
+    [Fact]
+    public async Task Terminal_host_folder_round_trips_unexpanded()
+    {
+        // Stored as typed: expansion happens at use, so the file stays portable across users.
+        var store = new JsonRegistryStore(PathFor("switchboard.json"));
+        await store.SaveAsync(new RegistryFile
+        {
+            TerminalHost = new TerminalHostSettings { Folder = @"%LOCALAPPDATA%\Switchboard\wt" },
+        });
+
+        var loaded = await store.LoadAsync();
+        Assert.Equal(@"%LOCALAPPDATA%\Switchboard\wt", loaded.TerminalHost.Folder);
+    }
+
+    [Fact]
+    public async Task Terminal_host_folder_is_written_under_terminal_host()
+    {
+        var path = PathFor("switchboard.json");
+        await new JsonRegistryStore(path).SaveAsync(new RegistryFile
+        {
+            TerminalHost = new TerminalHostSettings { Folder = @"C:\wt" },
+        });
+
+        var json = await File.ReadAllTextAsync(path);
+        Assert.Contains("\"terminalHost\"", json);
+        Assert.Contains("\"folder\"", json);
     }
 
     [Fact]

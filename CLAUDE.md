@@ -19,7 +19,7 @@ Registry lives at `%APPDATA%\Switchboard\switchboard.json`. A sample is in `docs
 
 ## Architecture in one paragraph
 
-`Switchboard.Core` is pure logic and knows nothing about Windows or WPF; anything that can live there must. `Switchboard.Windows` is the Win32 surface — every P/Invoke is in `Interop/NativeMethods.cs`, nowhere else. `Switchboard.App` composes the graph in `App.xaml.cs`; `Services/TerminalSession` is the only object that sees the registry, the tracker, the status engine and the colorizer together, and the UI talks only to it. Windows are found by title at launch and tracked by HWND after that (ADR-0002).
+`Switchboard.Core` is pure logic and knows nothing about Windows or WPF; anything that can live there must. `Switchboard.Windows` is the Win32 surface — every P/Invoke is in `Interop/NativeMethods.cs`, nowhere else. `Switchboard.App` composes the graph in `App.xaml.cs`; `Services/TerminalSession` is the only object that sees the registry, the tracker, the status engine and the colorizer together, and the UI talks only to it. Windows are found by title at launch and tracked by HWND after that (ADR-0002); only windows of the private terminal host (`TerminalHost.Owns`) can be bound, and nothing is ever adopted by title (ADR-0020, ADR-0021).
 
 ## Invariants — do not break these
 
@@ -63,7 +63,7 @@ Registry lives at `%APPDATA%\Switchboard\switchboard.json`. A sample is in `docs
 
 ## Current milestone
 
-M4 (settings UI), code-complete on branch `m4-settings-ui`: settings window with Terminals /
-Edge strip / Hotkeys / Status rules pages, stolen-chord badges, and bulk import from running
-windows — ADR-0018. M3 is merged. M2's Slice 4/6 manual checks are still open — see
-`docs/PROGRESS.md` for the live checklist.
+M5 (private terminal host), on branch `private-terminal-host`: no adoption by title
+(ADR-0020), and terminals run in a private portable WT whose windows are the only ones
+Switchboard can bind (ADR-0021). M4 is merged. Manual checks for M2 Slices 4/6, M4, and M5 are
+open — see `docs/PROGRESS.md` for the live checklist.

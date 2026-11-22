@@ -38,7 +38,13 @@ Milestones are vertical slices; each one is usable on its own.
 - Import from running windows, in bulk.
 - Only settings the registry actually has are shown; the named-pipe source moved out (below).
 
-## M5 — Polish & ship
+## M5 — Private terminal host
+- Never adopt a window by title; restart recovery is by handle only (ADR-0020).
+- Run the terminals in a private portable WT; only its windows can be bound, adopted or
+  imported, and Start-menu WT can no longer open tabs in them (ADR-0021, PRD R28).
+- Settings → Terminals gains the host folder field.
+
+## M6 — Polish & ship (was M5)
 - Named-pipe status source with sample `pwsh` and `bash` hooks (PRD R19 source 4). Deferred
   from M4: it is the only status source needing per-shell setup, and title rules plus
   thumbnail motion already carry the daily case.

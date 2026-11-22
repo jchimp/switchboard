@@ -37,6 +37,7 @@ public sealed class TerminalSession : IDisposable
     private readonly TaskbarVisibility _taskbar;
     private readonly RegistryWatcher _watcher;
     private readonly WindowSampler _sampler;
+    private readonly TerminalHost _host;
     private readonly MotionSampler _motion = new();
     private readonly ILogger<TerminalSession> _log;
     private readonly TimeProvider _time;
@@ -54,8 +55,9 @@ public sealed class TerminalSession : IDisposable
     public TerminalSession(
         IRegistryStore store, ITerminalLauncher launcher, WindowTracker tracker,
         FrameColorizer colorizer, TaskbarVisibility taskbar, RegistryWatcher watcher,
-        WindowSampler sampler, TimeProvider time, ILogger<TerminalSession> log)
+        WindowSampler sampler, TerminalHost host, TimeProvider time, ILogger<TerminalSession> log)
     {
+        _host = host;
         _store = store;
         _launcher = launcher;
         _tracker = tracker;
@@ -77,7 +79,20 @@ public sealed class TerminalSession : IDisposable
         _cycleTimer.Tick += (_, _) => CommitCycle();
     }
 
-    public RegistryFile Registry { get; private set; } = RegistryFile.Empty;
+    public RegistryFile Registry
+    {
+        get => _registry;
+        private set
+        {
+            _registry = value;
+
+            // Launch and ownership read the host folder. Syncing it here keeps every path that
+            // replaces the registry (load, hot-reload, settings, edits) in step (ADR-0021).
+            _host.Folder = value.TerminalHost.Folder;
+        }
+    }
+
+    private RegistryFile _registry = RegistryFile.Empty;
 
     /// <summary>Fired on the UI thread whenever a terminal's state or presence changes.</summary>
     public event Action<string, TerminalState>? StateChanged;
@@ -123,14 +138,13 @@ public sealed class TerminalSession : IDisposable
         _tracker.ForegroundChanged += OnForegroundChanged;
         _tracker.Start();
 
-        // HWND first: handles survive a manager restart while titles drift; stale handles
-        // fail validation and fall through to the title pass (ADR-0002 amendment).
+        // Handles survive a manager restart while titles drift (ADR-0002 amendment). No title
+        // pass: it bound the user's own one-off windows; stale handles show as unbound (ADR-0020).
         var byHwnd = _tracker.RecoverByHwnd(Registry.Terminals
             .Select(t => (t.Name, Hwnd: (nint)t.LastHwnd.GetValueOrDefault()))
             .Where(p => p.Hwnd != 0)
             .ToList());
-        var byTitle = _tracker.RecoverByTitle(Registry.Terminals.Select(t => t.Name));
-        _log.LogInformation("Recovered {ByHwnd} windows by handle, {ByTitle} by title", byHwnd, byTitle);
+        _log.LogInformation("Recovered {ByHwnd} windows by handle", byHwnd);
         _tracker.ProbeForeground();
         ReapplyTaskbarVisibility();
 
@@ -562,7 +576,6 @@ public sealed class TerminalSession : IDisposable
             _status.WindowGone(name);
         }
 
-        _tracker.RecoverByTitle(fresh.Terminals.Select(t => t.Name));
         ReapplyColors();
         ReapplyTaskbarVisibility();
         RegistryChanged?.Invoke();
