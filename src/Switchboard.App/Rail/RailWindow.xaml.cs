@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -31,6 +32,7 @@ public partial class RailWindow : Window, IDisposable
     private PixelRect _openTarget;
     private bool _tracksHover;
     private bool _menuOpen;
+    private bool _morePressed;
 
     public RailWindow(RailViewModel vm, TerminalSession session, ILogger<WindowThumbnail> thumbLog)
     {
@@ -39,6 +41,7 @@ public partial class RailWindow : Window, IDisposable
         _thumbLog = thumbLog;
         InitializeComponent();
         DataContext = vm;
+        RailFrame.ContextMenu = TrackMenu(SwitchboardMenu.Build(vm, beforeNewTerminal: CloseRail));
         SourceInitialized += (_, _) =>
         {
             // Same contract as the strip: invisible to Alt-Tab, never steals focus (ADR-0012).
@@ -117,7 +120,6 @@ public partial class RailWindow : Window, IDisposable
         }
 
         _vm.Sync(); // events keep it fresh, but a cheap resync on open is bulletproof
-        _vm.RefreshUnbound(); // R7: the one EnumWindows-shaped scan, run only on open
 
         // After Sync: the top rail's width follows the card count.
         if (ComputeRects() is not { } rects)
@@ -199,11 +201,11 @@ public partial class RailWindow : Window, IDisposable
         ListScroller.VerticalScrollBarVisibility = vertical ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
         ListScroller.HorizontalScrollBarVisibility = vertical ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
 
-        // The top-edge rail has no height for a bottom-docked foot: the unbound
-        // section alone would squeeze the card list to nothing. Concept A rotates the foot
-        // into a right-hand column there.
-        DockPanel.SetDock(FootSection, vertical ? Dock.Bottom : Dock.Right);
-        FootSection.Width = vertical ? double.NaN : RailMetrics.FootColumnWidthDips;
+        // The top-edge rail has no height to spare, so the "…" slot is a column at the right
+        // end there; side rails have no width to spare, so it's a row at the bottom.
+        DockPanel.SetDock(MenuSlot, vertical ? Dock.Bottom : Dock.Right);
+        MenuSlot.Width = vertical ? double.NaN : RailMetrics.MenuSlotDips;
+        MenuSlot.Padding = vertical ? new Thickness(8, 0, 8, 6) : default;
     }
 
     private PixelRect ReverseTarget() =>
@@ -279,6 +281,15 @@ public partial class RailWindow : Window, IDisposable
         var dpi = VisualTreeHelper.GetDpi(this);
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
+        // DWM draws thumbnails above the rail's own visuals and nothing clips them to the
+        // scroller. A card scrolled past the edge would paint over the "…" slot, so only
+        // cards fully inside the visible list show a live preview.
+        // The viewport sits inside the scroller's padding (the default template's presenter margin).
+        var pad = ListScroller.Padding;
+        var listOrigin = ListScroller.TranslatePoint(new Point(pad.Left, pad.Top), this);
+        var visibleList = new Rect(listOrigin, new Size(ListScroller.ViewportWidth, ListScroller.ViewportHeight));
+        visibleList.Inflate(0.5, 0.5); // layout rounding must not hide a card that fits exactly
+
         foreach (var item in _vm.Items)
         {
             var source = _session.HwndOf(item.Name);
@@ -325,7 +336,8 @@ public partial class RailWindow : Window, IDisposable
                 continue; // the terminal relaunched under the same name; re-registration failed
             }
 
-            thumb.UpdateDestination(rect);
+            var inside = visibleList.Contains(new Rect(origin, new Size(slot.ActualWidth, slot.ActualHeight)));
+            thumb.UpdateDestination(rect, visible: inside);
             seen.Add(item.Name);
         }
 
@@ -382,54 +394,87 @@ public partial class RailWindow : Window, IDisposable
 
     private void RailMenu_Closed(object sender, RoutedEventArgs e) => _menuOpen = false;
 
-    private void Refresh_Click(object sender, MouseButtonEventArgs e) => _vm.RefreshUnbound();
-
-    private async void NewTerminal_Click(object sender, MouseButtonEventArgs e)
+    /// <summary>
+    /// Hooks a menu into the hover probe: the popup is outside the rail's bounds, so the rail
+    /// must stay open while it (or any of its submenus, which live inside it) is up.
+    /// </summary>
+    private ContextMenu TrackMenu(ContextMenu menu)
     {
-        CloseRail();
-        await _vm.NewTerminalCommand.ExecuteAsync(null);
+        menu.Opened += RailMenu_Opened;
+        menu.Closed += RailMenu_Closed;
+        return menu;
     }
 
     /// <summary>
-    /// "Adopt as…": a small menu of Closed registered terminals plus "New terminal…", built
-    /// per click since the offer list changes with registry state. The menu is the same
-    /// sanctioned focus escape hatch as the strip's context menu (ADR-0006/0012).
+    /// The "…" menu, built per click: the adopt offers change with the desktop and the
+    /// registry. Opening it is the one moment the unbound scan runs (R7) — never on a timer.
     /// </summary>
-    private void AdoptButton_Click(object sender, MouseButtonEventArgs e)
+    private void MoreButton_Click(object sender, MouseButtonEventArgs e)
     {
-        if (sender is not FrameworkElement { DataContext: UnboundWindow window } element)
+        // Open only on a press that started here. Clicking "…" while its menu is open: the
+        // press goes to the popup and closes it, and the release must not reopen it.
+        if (!_morePressed)
         {
             return;
         }
 
-        var menu = new ContextMenu();
-        menu.Opened += RailMenu_Opened;
-        menu.Closed += RailMenu_Closed;
+        _morePressed = false;
+        var menu = TrackMenu(
+            SwitchboardMenu.Build(_vm, beforeNewTerminal: CloseRail, adopt: BuildAdoptMenu(_vm.UnboundWindows())));
+        menu.PlacementTarget = MoreButton;
+        menu.Placement = PlacementMode.Bottom;
+        menu.IsOpen = true;
+    }
 
-        foreach (var def in _vm.AdoptableTerminals())
+    private void MoreButton_Pressed(object sender, MouseButtonEventArgs e) => _morePressed = true;
+
+    private void MoreButton_Left(object sender, MouseEventArgs e) => _morePressed = false;
+
+    /// <summary>"Adopt window ▸": one entry per unbound window, each holding its "Adopt as…" offers.</summary>
+    private MenuItem BuildAdoptMenu(IReadOnlyList<UnboundWindow> unbound)
+    {
+        var adopt = new MenuItem { Header = "Adopt window" };
+        foreach (var window in unbound)
         {
-            var item = new MenuItem { Header = def.Name };
-            item.Click += (_, _) => _vm.Adopt(window.Hwnd, def.Name);
-            menu.Items.Add(item);
+            var entry = new MenuItem { Header = SwitchboardMenu.Literal(window.Title) };
+            AddAdoptOffers(entry, window);
+            adopt.Items.Add(entry);
         }
 
-        if (menu.Items.Count > 0)
+        if (adopt.Items.Count == 0)
         {
-            menu.Items.Add(new Separator());
+            adopt.Items.Add(new MenuItem { Header = "No unbound windows", IsEnabled = false });
+        }
+
+        return adopt;
+    }
+
+    /// <summary>
+    /// "Adopt as…": the Closed registered terminals plus "New terminal…". The menu is the same
+    /// sanctioned focus escape hatch as the strip's context menu (ADR-0006/0012).
+    /// </summary>
+    private void AddAdoptOffers(MenuItem parent, UnboundWindow window)
+    {
+        foreach (var def in _vm.AdoptableTerminals())
+        {
+            var item = new MenuItem { Header = SwitchboardMenu.Literal(def.Name) };
+            item.Click += (_, _) => _vm.Adopt(window.Hwnd, def.Name);
+            parent.Items.Add(item);
+        }
+
+        if (parent.Items.Count > 0)
+        {
+            parent.Items.Add(new Separator());
         }
 
         var newItem = new MenuItem { Header = "New terminal…" };
         newItem.Click += (_, _) =>
         {
             var seed = _vm.AdoptSeed();
-            ShowEditPopup(element, "Adopt as new terminal", seed.Name, seed.Color,
+            ShowEditPopup(MoreButton, "Adopt as new terminal", seed.Name, seed.Color,
                 (name, color) => _vm.AdoptAsNewAsync(window.Hwnd, name, color));
         };
-        menu.Items.Add(newItem);
-
-        element.ContextMenu = menu;
-        menu.PlacementTarget = element;
-        menu.IsOpen = true;
+        parent.Items.Add(newItem);
     }
 
     private void Rename_Click(object sender, MouseButtonEventArgs e)
