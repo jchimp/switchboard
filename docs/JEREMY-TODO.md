@@ -10,7 +10,7 @@ Personal working notes for Jeremy (not for the engine). Skim top-to-bottom.
   no taskbar-flash or named-pipe toggle: `StatusEngine.Flashed` has no caller and the pipe
   isn't implemented. The mockup and the shipped window now visibly differ — ADR-0018 is the
   record of why. Say the word if you'd rather have any of those settings for real.
-- [ ] **The named-pipe status source moved from M4 to M5.** Your call in planning. PRD R19 no
+- [ ] **The named-pipe status source moved from M4 to M5 (now M6, after the private-host milestone).** Your call in planning. PRD R19 no
   longer promises it in M4 and the ROADMAP bullet moved.
 - [ ] **Settings pages apply live; only the terminal editor has a Save button.** A name change
   rebinds a live window (ADR-0014), which is not something to do per keystroke; everything
