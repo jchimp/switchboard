@@ -64,6 +64,16 @@ public class RailPlacementTests
     }
 
     [Fact]
+    public void Top_rail_content_length_rounds_up_so_no_card_is_clipped()
+    {
+        // 5 cards: 5 * 216 + 46 = 1126 DIPs; at 175% that is 1970.5 px.
+        var rect = RailPlacement.Compute(
+            Monitor(0, 0, 3840, 2160, scale: 1.75), ScreenEdge.Top, stripThicknessDips: 0, railSizeDips: 100,
+            contentLengthDips: 1126);
+        Assert.Equal(1971, rect.Width);
+    }
+
+    [Fact]
     public void Hidden_top_rail_keeps_the_centered_x()
     {
         var rect = RailPlacement.ComputeHidden(

@@ -69,7 +69,9 @@ public static class StripPlacement
         // Never round a sliver down to nothing — a 0-px strip can't be hovered back out.
         var px = Math.Max(1, (int)Math.Round(thicknessDips * monitor.DpiScale));
         var width = contentLengthDips is { } content
-            ? Math.Clamp((int)Math.Round(content * monitor.DpiScale), 1, wa.Width)
+            // Ceiling, not Round: half a pixel short (216n + 46 at 175% ends in .5, which
+            // Round takes down to even) clips the last card and its strip segment.
+            ? Math.Clamp((int)Math.Ceiling(content * monitor.DpiScale), 1, wa.Width)
             : wa.Width;
         return edge switch
         {
