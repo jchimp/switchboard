@@ -10,10 +10,12 @@ namespace Switchboard.App.ViewModels;
 public sealed partial class StripViewModel : ObservableObject
 {
     private readonly TerminalSession _session;
+    private readonly SettingsLauncher _settings;
 
-    public StripViewModel(TerminalSession session)
+    public StripViewModel(TerminalSession session, SettingsLauncher settings)
     {
         _session = session;
+        _settings = settings;
         _session.StateChanged += OnStateChanged;
         _session.RegistryChanged += Rebuild;
         _session.ForegroundChanged += OnForegroundChanged;
@@ -30,7 +32,10 @@ public sealed partial class StripViewModel : ObservableObject
     public bool AnyAttention => Items.Any(i => i.WantsAttention);
 
     [RelayCommand]
-    private Task Activate(TerminalItemViewModel item) => _session.ActivateAsync(item.Name);
+    private Task Activate(TerminalItemViewModel item) => _session.ActivateAsync(item.Name, toggleMinimize: true);
+
+    [RelayCommand]
+    private void OpenSettings() => _settings.Open();
 
     [RelayCommand]
     private void ReapplyColors() => _session.ReapplyColors();

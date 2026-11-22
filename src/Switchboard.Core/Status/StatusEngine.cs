@@ -23,11 +23,14 @@ public sealed class StatusEngine
     private readonly Dictionary<string, Entry> _entries = new(StringComparer.Ordinal);
     private IReadOnlyList<StatusRule> _globalRules;
 
+    /// <summary>How long Working survives without activity before decaying to Idle (PRD R20).</summary>
+    public static readonly TimeSpan DefaultIdleAfter = TimeSpan.FromSeconds(20);
+
     public StatusEngine(TimeProvider time, IReadOnlyList<StatusRule> globalRules, TimeSpan? idleAfter = null)
     {
         _time = time;
         _globalRules = globalRules;
-        IdleAfter = idleAfter ?? TimeSpan.FromSeconds(20);
+        IdleAfter = idleAfter ?? DefaultIdleAfter;
     }
 
     public TimeSpan IdleAfter { get; }

@@ -91,6 +91,9 @@ public sealed record StripSettings
 
     public bool ShowClosedTerminals { get; init; } = true;
 
+    /// <summary>Clicking the segment of the terminal that is already foreground minimizes it (ADR-0019).</summary>
+    public bool ClickMinimizesFocused { get; init; } = true;
+
     /// <summary>Monitor index (0 = primary). Follow-cursor is a later milestone.</summary>
     public int Monitor { get; init; }
 }

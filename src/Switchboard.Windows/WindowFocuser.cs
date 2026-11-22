@@ -8,6 +8,20 @@ public static class WindowFocuser
     /// <summary>The current foreground window; the edit popup restores this on close (ADR-0014).</summary>
     public static nint CurrentForeground() => NativeMethods.GetForegroundWindow();
 
+    /// <summary>True when <paramref name="hwnd"/> is the foreground window right now.</summary>
+    public static bool IsForeground(nint hwnd) => hwnd != 0 && NativeMethods.GetForegroundWindow() == hwnd;
+
+    /// <summary>Minimizes the window; the click-again-to-minimize path (ADR-0019).</summary>
+    public static bool Minimize(nint hwnd)
+    {
+        if (hwnd == 0 || !NativeMethods.IsWindow(hwnd))
+        {
+            return false;
+        }
+
+        return NativeMethods.ShowWindow(hwnd, NativeMethods.SW_MINIMIZE);
+    }
+
     public static bool Focus(nint hwnd)
     {
         if (hwnd == 0 || !NativeMethods.IsWindow(hwnd))

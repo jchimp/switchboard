@@ -8,6 +8,12 @@ using Switchboard.Windows.Tracking;
 
 namespace Switchboard.App.Services;
 
+/// <summary>One row of an import: a definition to register, and the live window to bind it to (R27).</summary>
+public sealed record ImportRequest(TerminalDefinition Definition, nint Hwnd);
+
+/// <summary>An import row that could not land, with a message fit to show beside it.</summary>
+public sealed record ImportFailure(string Name, string Reason);
+
 /// <summary>
 /// The one object that knows about the registry, the live windows, and their status
 /// at the same time. Everything UI-facing reads from here; nothing UI-facing talks to
@@ -192,8 +198,13 @@ public sealed class TerminalSession : IDisposable
 
     public TerminalState StateOf(string name) => _status.StateOf(name);
 
-    /// <summary>Focus if running, launch if not. The single entry point for "jump to X".</summary>
-    public async Task ActivateAsync(string name)
+    /// <summary>
+    /// Focus if running, launch if not. The single entry point for "jump to X".
+    /// <paramref name="toggleMinimize"/> is true only for strip/rail clicks: when the terminal is
+    /// already foreground and the setting is on, the click minimizes it instead (ADR-0019).
+    /// Hotkey jumps always focus.
+    /// </summary>
+    public async Task ActivateAsync(string name, bool toggleMinimize = false)
     {
         var def = Definition(name);
         if (def is null)
@@ -204,6 +215,14 @@ public sealed class TerminalSession : IDisposable
 
         if (_tracker.Find(name) is { } live)
         {
+            // The strip and rail never activate (invariant 7), so the terminal the user just
+            // clicked is still the foreground window if it was before the click.
+            if (toggleMinimize && Registry.Strip.ClickMinimizesFocused && WindowFocuser.IsForeground(live.Hwnd))
+            {
+                WindowFocuser.Minimize(live.Hwnd);
+                return;
+            }
+
             WindowFocuser.Focus(live.Hwnd);
             return;
         }
@@ -380,6 +399,130 @@ public sealed class TerminalSession : IDisposable
         _tracker.Unbind(name);
         await PersistAsync();
         RegistryChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Applies everything on the settings pages except the terminal list (ADR-0018): strip,
+    /// hotkeys, global status rules, and the two root flags. Terminals are deliberately
+    /// carried over from the current registry rather than taken from <paramref name="updated"/>,
+    /// so a settings edit can never stomp a concurrent rename or import.
+    /// </summary>
+    /// <remarks>
+    /// Numbers are clamped through <see cref="SettingsBounds"/> before they land: a slider can
+    /// otherwise produce a strip with nothing left to hover.
+    /// </remarks>
+    public async Task ApplySettingsAsync(RegistryFile updated)
+    {
+        Registry = updated with
+        {
+            Terminals = Registry.Terminals,
+            Strip = SettingsBounds.Clamp(updated.Strip),
+        };
+
+        _status.ReplaceGlobalRules(Registry.GlobalStatusRules);
+        await PersistAsync();
+        RegistryChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Reorders the registry, which is the order the strip, rail and switcher render in.
+    /// Jump keys are an explicit field and do not move with a row.
+    /// </summary>
+    /// <remarks>
+    /// Names not in <paramref name="namesInOrder"/> keep their relative order at the end, so a
+    /// terminal added underneath this call (hot-reload, quick launch) survives the reorder.
+    /// </remarks>
+    public async Task ReorderTerminalsAsync(IReadOnlyList<string> namesInOrder)
+    {
+        var rank = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var i = 0; i < namesInOrder.Count; i++)
+        {
+            rank[namesInOrder[i]] = i;
+        }
+
+        var reordered = Registry.Terminals
+            .Select((t, index) => (Terminal: t, Key: rank.TryGetValue(t.Name, out var r) ? r : namesInOrder.Count + index))
+            .OrderBy(x => x.Key)
+            .Select(x => x.Terminal)
+            .ToList();
+
+        if (reordered.Select(t => t.Name).SequenceEqual(Registry.Terminals.Select(t => t.Name), StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        Registry = Registry with { Terminals = reordered };
+        await PersistAsync();
+        RegistryChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Registers and binds several already-running windows in one step (R27). One save and one
+    /// <see cref="RegistryChanged"/> for the whole batch, unlike calling
+    /// <see cref="AdoptAsNewAsync"/> per window.
+    /// </summary>
+    /// <returns>
+    /// The rows that could not be imported, with a user-facing reason. A window that closed
+    /// between the scan and the click fails alone; the rest of the batch still lands.
+    /// </returns>
+    public async Task<IReadOnlyList<ImportFailure>> ImportAsync(IReadOnlyList<ImportRequest> batch)
+    {
+        var failures = new List<ImportFailure>();
+        var accepted = new List<ImportRequest>();
+        var taken = Registry.Terminals.Select(t => t.Name).ToHashSet(StringComparer.Ordinal);
+
+        foreach (var request in batch)
+        {
+            if (request.Definition.Validate() is { } error)
+            {
+                failures.Add(new ImportFailure(request.Definition.Name, error));
+                continue;
+            }
+
+            if (!taken.Add(request.Definition.Name))
+            {
+                failures.Add(new ImportFailure(request.Definition.Name, $"Name '{request.Definition.Name}' is already in use."));
+                continue;
+            }
+
+            accepted.Add(request);
+        }
+
+        if (accepted.Count == 0)
+        {
+            return failures;
+        }
+
+        // Register every accepted row first: Bind raises WindowAppeared, and the handler needs
+        // to find the definition to colorize and hide the taskbar button.
+        Registry = Registry with { Terminals = [.. Registry.Terminals, .. accepted.Select(a => a.Definition)] };
+
+        var bound = new List<string>();
+        foreach (var request in accepted)
+        {
+            try
+            {
+                _tracker.Bind(request.Definition.Name, request.Hwnd);
+                bound.Add(request.Definition.Name);
+            }
+            catch (ArgumentException ex)
+            {
+                _log.LogWarning(ex, "Import failed for '{Name}'", request.Definition.Name);
+                failures.Add(new ImportFailure(request.Definition.Name, "That window is gone; refresh the list."));
+            }
+        }
+
+        // A window that vanished mid-import leaves no registry row behind.
+        var lost = accepted.Select(a => a.Definition.Name).Except(bound, StringComparer.Ordinal).ToHashSet(StringComparer.Ordinal);
+        if (lost.Count > 0)
+        {
+            Registry = Registry with { Terminals = Registry.Terminals.Where(t => !lost.Contains(t.Name)).ToList() };
+        }
+
+        await PersistAsync();
+        RegistryChanged?.Invoke();
+        _log.LogInformation("Imported {Count} window(s), {Failed} failed", bound.Count, failures.Count);
+        return failures;
     }
 
     /// <summary>

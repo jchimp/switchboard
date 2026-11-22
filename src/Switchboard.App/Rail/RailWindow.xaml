@@ -1,4 +1,4 @@
-<Window x:Class="Switchboard.App.Rail.RailWindow"
+﻿<Window x:Class="Switchboard.App.Rail.RailWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:Switchboard.App.ViewModels"
@@ -23,6 +23,8 @@
          and takes focus only while open, at the user's explicit request. -->
     <Border.ContextMenu>
       <ContextMenu Opened="RailMenu_Opened" Closed="RailMenu_Closed">
+        <MenuItem Header="Settings…" Command="{Binding OpenSettingsCommand}" />
+        <Separator />
         <MenuItem Header="Reapply colors" Command="{Binding ReapplyColorsCommand}" />
         <MenuItem Header="Reload registry" Command="{Binding ReloadRegistryCommand}" />
         <Separator />

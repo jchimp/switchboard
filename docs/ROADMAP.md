@@ -31,11 +31,17 @@ Milestones are vertical slices; each one is usable on its own.
 - Cycle-recent walks an MRU list rather than a single previous (ADR-0015).
 
 ## M4 — Settings UI
-- The settings/registry screen from `docs/design/settings-registry.html`: table + editor, strip, hotkeys, status rules, appearance.
-- Named-pipe status source with sample `pwsh` and `bash` hooks.
-- Import from running windows.
+- The settings/registry screen from `docs/design/settings-registry.html`, minus the mockup's
+  Appearance page: terminals table + editor, edge strip, hotkeys, status rules (ADR-0018).
+- Live-apply, debounced — no Save buttons outside the terminal editor.
+- Hotkey rows show when another application owns a chord, instead of a log-only warning.
+- Import from running windows, in bulk.
+- Only settings the registry actually has are shown; the named-pipe source moved out (below).
 
 ## M5 — Polish & ship
+- Named-pipe status source with sample `pwsh` and `bash` hooks (PRD R19 source 4). Deferred
+  from M4: it is the only status source needing per-shell setup, and title rules plus
+  thumbnail motion already carry the daily case.
 - Tray icon (pause strip, open settings, quit). Start with Windows.
 - Single-folder `dotnet publish`, winget manifest.
 - Multi-monitor: follow-cursor strip, per-monitor override.

@@ -14,6 +14,35 @@ public sealed record StatusRule
         new() { State = TerminalState.Attention, Pattern = @"\b(waiting|done|finished|error|failed|traceback)\b" },
         new() { State = TerminalState.Working, Pattern = @"\b(running|building|thinking|installing|compiling|hmr update|reloading)\b" },
     ];
+
+    /// <summary>
+    /// Checks a pattern the way <see cref="TitleRuleEvaluator"/> will compile it, so the
+    /// settings editor can reject a bad regex before it reaches the file. Returns the
+    /// failure message, or null when the pattern is usable.
+    /// </summary>
+    /// <remarks>
+    /// The evaluator treats an uncompilable pattern as "never matches" (invariant 9: user
+    /// regexes are hostile input and must never crash the tracker). That is the right
+    /// runtime behaviour and the wrong editing experience — silently dead rules look like
+    /// a Switchboard bug — so the editor validates up front instead.
+    /// </remarks>
+    public static string? ValidatePattern(string pattern)
+    {
+        if (string.IsNullOrWhiteSpace(pattern))
+        {
+            return "Pattern is empty.";
+        }
+
+        try
+        {
+            _ = new Regex(pattern, TitleRuleEvaluator.Options, TitleRuleEvaluator.MatchTimeout);
+            return null;
+        }
+        catch (ArgumentException ex)
+        {
+            return ex.Message;
+        }
+    }
 }
 
 /// <summary>
@@ -23,7 +52,9 @@ public sealed record StatusRule
 /// </summary>
 public sealed class TitleRuleEvaluator
 {
-    private static readonly TimeSpan MatchTimeout = TimeSpan.FromMilliseconds(20);
+    internal const RegexOptions Options = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
+
+    internal static readonly TimeSpan MatchTimeout = TimeSpan.FromMilliseconds(20);
 
     private readonly Dictionary<string, Regex?> _cache = new(StringComparer.Ordinal);
 
@@ -54,7 +85,7 @@ public sealed class TitleRuleEvaluator
 
         try
         {
-            var regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, MatchTimeout);
+            var regex = new Regex(pattern, Options, MatchTimeout);
             _cache[pattern] = regex;
             return regex;
         }

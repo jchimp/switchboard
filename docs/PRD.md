@@ -48,7 +48,7 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 ### Strip (glance layer)
 - R11. A thin strip on a configurable screen edge (top default; left/right supported) shows one colored segment per registered terminal in registry order.
 - R12. Active terminal's segment glows; Attention pulses; Idle is dimmed; Closed is nearly transparent.
-- R13. Clicking a segment focuses the terminal, or launches it if closed.
+- R13. Clicking a segment focuses the terminal, or launches it if closed. If the terminal is already foreground and `strip.clickMinimizesFocused` is on (default), the click minimizes it instead; hotkey jumps always focus.
 - R14. The strip never takes focus, never appears in Alt-Tab or the taskbar, and optionally reserves its pixels (app-bar mode).
 - R15. Hovering opens the rail (M2).
 - R23. Optionally (`autoHide`, off by default) the strip collapses to a thin sliver (`hiddenThickness`, default 2 px) after the cursor leaves; touching the screen edge slides it back out. Segment colors remain visible in the sliver. Ignored while app-bar mode is on (ADR-0010).
@@ -60,7 +60,7 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 
 ### Status
 - R18. States: Closed, Idle, Working, Attention. Attention is sticky until the window is focused.
-- R19. Sources, in this order of delivery: title regex rules (per-terminal, then global); taskbar flash; thumbnail motion (M2); named-pipe from the shell (M4, opt-in).
+- R19. Sources, in this order of delivery: title regex rules (per-terminal, then global); taskbar flash; thumbnail motion (M2); named-pipe from the shell (later, opt-in). Title rules and thumbnail motion are live; taskbar flash and the pipe are not yet wired, and the settings UI shows only the sources that exist.
 - R20. Working decays to Idle after 20 s without activity.
 
 ### Taskbar
@@ -69,6 +69,10 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 ### New terminal
 - R21. A new terminal comes from the quick-launch defaults: next free `term-N` name, next unused palette hue, default profile, last-used directory (`quickLaunch.lastDirectory`). `Ctrl+Alt+Shift+N` registers and launches immediately with those defaults, no UI (ADR-0017).
 - R22. `Ctrl+Alt+N` opens the picker: profile via Tab (read live from Windows Terminal's settings.json), directory box, "keep" toggle (Ctrl+K), Enter launches, Esc cancels. Opens fully seeded, so a bare Enter equals the quiet launch (ADR-0017).
+
+### Settings
+- R26. A settings window edits the registry directly: terminals (add, edit, delete, reorder), strip, hotkeys, and global status rules. Edits apply live and persist through the same atomic write as any other change, so hand-editing the file and using the window are the same operation (ADR-0018). It shows only settings the product reads; hotkey rows say when Windows refused a chord.
+- R27. Running Windows Terminal windows that are not bound to a terminal can be imported in bulk from the settings window: proposed name and color per window, edited before committing, registered and bound in one write.
 
 ## Non-functional
 

@@ -55,6 +55,20 @@ public sealed class JsonRegistryStoreTests : IDisposable
         Assert.Equal(190, loaded.Strip.RailTopHeightDips);
         Assert.Equal(TopWidthMode.Centered, loaded.Strip.TopWidth);
         Assert.True(loaded.ThumbnailMotionEnabled);
+        Assert.True(loaded.Strip.ClickMinimizesFocused);
+    }
+
+    [Fact]
+    public async Task Click_minimizes_focused_can_be_turned_off_and_round_trips()
+    {
+        var store = new JsonRegistryStore(PathFor("switchboard.json"));
+        await store.SaveAsync(new RegistryFile
+        {
+            Strip = new StripSettings { ClickMinimizesFocused = false },
+        });
+
+        var loaded = await store.LoadAsync();
+        Assert.False(loaded.Strip.ClickMinimizesFocused);
     }
 
     [Fact]
