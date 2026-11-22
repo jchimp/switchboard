@@ -53,7 +53,15 @@ public sealed class TerminalHost
     public string? SettingsFile => TerminalHostPath.SettingsFile(_folder);
 
     /// <summary>True when a host folder is set but holds no <c>wt.exe</c>; launches would fail.</summary>
-    public bool IsMissing => _folder is not null && !File.Exists(WtExecutable);
+    public bool IsMissing => IsMissingAt(_folder);
+
+    /// <summary>
+    /// The same check for a folder as typed (environment variables unexpanded), so the
+    /// settings page can validate while the user types, before anything is saved.
+    /// </summary>
+    public static bool IsMissingAt(string? folder) =>
+        TerminalHostPath.Normalize(folder is null ? null : Environment.ExpandEnvironmentVariables(folder)) is { } f
+        && !File.Exists(TerminalHostPath.WtExecutable(f));
 
     /// <summary>True when <paramref name="hwnd"/> is a WT window run by the host's <c>WindowsTerminal.exe</c>.</summary>
     public bool Owns(nint hwnd)

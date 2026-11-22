@@ -17,14 +17,12 @@ public sealed partial class SettingsTerminalsViewModel : ObservableObject
 {
     private readonly TerminalSession _session;
     private readonly SettingsApplyQueue _queue;
-    private readonly TerminalHost _host;
     private bool _loadingHostFolder;
 
-    public SettingsTerminalsViewModel(TerminalSession session, SettingsApplyQueue queue, TerminalHost host)
+    public SettingsTerminalsViewModel(TerminalSession session, SettingsApplyQueue queue)
     {
         _session = session;
         _queue = queue;
-        _host = host;
         _session.RegistryChanged += Sync;
         _session.RegistryChanged += OnHostChanged;
         _session.StateChanged += OnStateChanged;
@@ -37,10 +35,14 @@ public sealed partial class SettingsTerminalsViewModel : ObservableObject
     /// other pages (ADR-0018). Empty means the installed Windows Terminal.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HostFolderMissing))]
     private string _terminalHostFolder = string.Empty;
 
-    /// <summary>A folder is set but has no wt.exe in it: every launch would fail.</summary>
-    public bool HostFolderMissing => _host.IsMissing;
+    /// <summary>
+    /// The typed folder has no wt.exe in it: every launch would fail. Checked on the text, not
+    /// on the saved setting, so it updates per keystroke instead of after the debounced save.
+    /// </summary>
+    public bool HostFolderMissing => TerminalHost.IsMissingAt(TerminalHostFolder);
 
     partial void OnTerminalHostFolderChanged(string value)
     {
@@ -60,8 +62,6 @@ public sealed partial class SettingsTerminalsViewModel : ObservableObject
         {
             LoadHostFolder();
         }
-
-        OnPropertyChanged(nameof(HostFolderMissing));
     }
 
     private void LoadHostFolder()
