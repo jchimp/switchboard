@@ -154,6 +154,15 @@
           <TextBlock Text="Terminals" Style="{StaticResource PageTitle}" />
           <TextBlock Style="{StaticResource PageSub}"
                      Text="One row per named Windows Terminal window. Order here is the order on the strip; jump keys are set per terminal." />
+
+          <TextBlock Text="Terminal host folder (portable Windows Terminal)" Style="{StaticResource FieldLabel}" />
+          <TextBox Style="{StaticResource MonoField}" MaxWidth="520" HorizontalAlignment="Stretch"
+                   Text="{Binding TerminalHostFolder, UpdateSourceTrigger=LostFocus}" />
+          <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,14"
+                     Text="Switchboard launches from here and only manages this copy's windows, so terminals you open yourself are never touched. Empty: the installed Windows Terminal, and any of its windows can be adopted. Applies to new launches." />
+          <TextBlock Style="{StaticResource Hint}" Foreground="{StaticResource SettingsError}" Margin="0,-8,0,14"
+                     Text="No wt.exe in this folder. Launches will fail until it is fixed or cleared."
+                     Visibility="{Binding HostFolderMissing, Converter={StaticResource BoolToVis}}" />
         </StackPanel>
 
         <Grid Grid.Row="1">

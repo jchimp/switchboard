@@ -131,6 +131,22 @@ internal static partial class NativeMethods
     [DllImport("kernel32.dll")]
     public static extern uint GetCurrentThreadId();
 
+    // ---- Process query (terminal host ownership, ADR-0021) -----------------------------
+
+    /// <summary>Enough to read an image path, and granted for any same-user process.</summary>
+    public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern nint OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inheritHandle, uint processId);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool QueryFullProcessImageName(nint process, uint flags, StringBuilder exeName, ref uint size);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool CloseHandle(nint handle);
+
     // ---- Hotkeys ---------------------------------------------------------------------
 
     public const int WM_HOTKEY = 0x0312;

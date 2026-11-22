@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Switchboard.App.Services;
 using Switchboard.Core.Registry;
 using Switchboard.Core.Status;
+using Switchboard.Windows;
 
 namespace Switchboard.App.ViewModels;
 
@@ -15,13 +16,65 @@ namespace Switchboard.App.ViewModels;
 public sealed partial class SettingsTerminalsViewModel : ObservableObject
 {
     private readonly TerminalSession _session;
+    private readonly SettingsApplyQueue _queue;
+    private readonly TerminalHost _host;
+    private bool _loadingHostFolder;
 
-    public SettingsTerminalsViewModel(TerminalSession session)
+    public SettingsTerminalsViewModel(TerminalSession session, SettingsApplyQueue queue, TerminalHost host)
     {
         _session = session;
+        _queue = queue;
+        _host = host;
         _session.RegistryChanged += Sync;
+        _session.RegistryChanged += OnHostChanged;
         _session.StateChanged += OnStateChanged;
         Sync();
+        LoadHostFolder();
+    }
+
+    /// <summary>
+    /// The private WT folder (ADR-0021), live-applied through the settings queue like the
+    /// other pages (ADR-0018). Empty means the installed Windows Terminal.
+    /// </summary>
+    [ObservableProperty]
+    private string _terminalHostFolder = string.Empty;
+
+    /// <summary>A folder is set but has no wt.exe in it: every launch would fail.</summary>
+    public bool HostFolderMissing => _host.IsMissing;
+
+    partial void OnTerminalHostFolderChanged(string value)
+    {
+        if (_loadingHostFolder)
+        {
+            return;
+        }
+
+        var folder = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        _queue.Queue(registry => registry with { TerminalHost = registry.TerminalHost with { Folder = folder } });
+    }
+
+    private void OnHostChanged()
+    {
+        // Our own save echoes back; reloading it would rewrite the box mid-typing.
+        if (!_queue.IsApplyingOwnEdit)
+        {
+            LoadHostFolder();
+        }
+
+        OnPropertyChanged(nameof(HostFolderMissing));
+    }
+
+    private void LoadHostFolder()
+    {
+        _loadingHostFolder = true;
+        try
+        {
+            TerminalHostFolder = _session.Registry.TerminalHost.Folder ?? string.Empty;
+        }
+        finally
+        {
+            _loadingHostFolder = false;
+        }
     }
 
     public ObservableCollection<SettingsTerminalRowViewModel> Rows { get; } = [];

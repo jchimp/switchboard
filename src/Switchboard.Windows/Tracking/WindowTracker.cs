@@ -20,6 +20,7 @@ public sealed class WindowTracker : IDisposable
 
     private readonly ILogger<WindowTracker> _log;
     private readonly TimeProvider _time;
+    private readonly TerminalHost _host;
     private readonly Dictionary<nint, TrackedWindow> _byHwnd = new();
     private readonly Dictionary<string, TrackedWindow> _byName = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DateTimeOffset> _pending = new(StringComparer.Ordinal);
@@ -28,10 +29,11 @@ public sealed class WindowTracker : IDisposable
     private readonly NativeMethods.WinEventProc _callback;
     private nint _hook;
 
-    public WindowTracker(ILogger<WindowTracker> log, TimeProvider time)
+    public WindowTracker(ILogger<WindowTracker> log, TimeProvider time, TerminalHost host)
     {
         _log = log;
         _time = time;
+        _host = host;
         _callback = OnWinEvent;
     }
 
@@ -40,9 +42,12 @@ public sealed class WindowTracker : IDisposable
     public event Action<TrackedWindow>? WindowClosed;
     public event Action<TrackedWindow?>? ForegroundChanged;
 
-    /// <summary>Terminal windows on the desktop that are not bound to any registry name.</summary>
+    /// <summary>
+    /// The host's terminal windows that are not bound to any registry name. Windows from any
+    /// other WT install are never listed (ADR-0021).
+    /// </summary>
     public IReadOnlyList<nint> UnboundTerminalWindows() =>
-        WindowInfo.EnumerateTerminalWindows().Where(h => !_byHwnd.ContainsKey(h)).ToList();
+        WindowInfo.EnumerateTerminalWindows().Where(h => !_byHwnd.ContainsKey(h) && _host.Owns(h)).ToList();
 
     /// <summary>
     /// The same set, with titles attached for display. Called on rail-open only — CLAUDE.md
@@ -89,9 +94,9 @@ public sealed class WindowTracker : IDisposable
     /// <summary>Manual binding, used by "adopt this window" in the rail and by restart recovery.</summary>
     public void Bind(string name, nint hwnd)
     {
-        if (!WindowInfo.IsTerminalWindow(hwnd))
+        if (!_host.Owns(hwnd))
         {
-            throw new ArgumentException("Not a Windows Terminal window.", nameof(hwnd));
+            throw new ArgumentException("Not a window of Switchboard's terminal host.", nameof(hwnd));
         }
 
         Unbind(name);
@@ -130,16 +135,17 @@ public sealed class WindowTracker : IDisposable
 
     /// <summary>
     /// Restart recovery: re-bind windows by the HWND they were bound to last run. Handles
-    /// survive a manager restart while titles drift; a stale handle (reboot, or the window
-    /// closed) fails <c>IsTerminalWindow</c> and is skipped (ADR-0002 amendment). There is no
-    /// title pass: it adopted the user's own one-off windows (ADR-0020).
+    /// survive a manager restart while titles drift; a stale handle (reboot, the window closed,
+    /// or a recycled handle now owned by another WT install) fails <see cref="TerminalHost.Owns"/>
+    /// and is skipped (ADR-0002 amendment, ADR-0021). There is no title pass: it adopted the
+    /// user's own one-off windows (ADR-0020).
     /// </summary>
     public int RecoverByHwnd(IEnumerable<(string Name, nint Hwnd)> lastKnown)
     {
         var bound = 0;
         foreach (var (name, hwnd) in lastKnown)
         {
-            if (!_byName.ContainsKey(name) && !_byHwnd.ContainsKey(hwnd) && WindowInfo.IsTerminalWindow(hwnd))
+            if (!_byName.ContainsKey(name) && !_byHwnd.ContainsKey(hwnd) && _host.Owns(hwnd))
             {
                 Bind(name, hwnd);
                 bound++;
@@ -210,8 +216,12 @@ public sealed class WindowTracker : IDisposable
         }
 
         PruneExpiredPending();
+
+        // Title match first: it is a string compare, while Owns queries the process. Only a
+        // window titled exactly like a pending launch pays for the ownership check, which
+        // stops a one-off Store WT window with the same title from taking the binding.
         var newTitle = WindowInfo.GetTitle(hwnd);
-        if (_pending.ContainsKey(newTitle))
+        if (_pending.ContainsKey(newTitle) && _host.Owns(hwnd))
         {
             Bind(newTitle, hwnd);
         }

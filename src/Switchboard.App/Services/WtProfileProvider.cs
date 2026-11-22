@@ -1,6 +1,7 @@
 using System.IO;
 using Microsoft.Extensions.Logging;
 using Switchboard.Core.WindowsTerminal;
+using Switchboard.Windows;
 
 namespace Switchboard.App.Services;
 
@@ -13,14 +14,24 @@ namespace Switchboard.App.Services;
 public sealed class WtProfileProvider
 {
     private readonly ILogger<WtProfileProvider> _log;
+    private readonly TerminalHost _host;
 
-    public WtProfileProvider(ILogger<WtProfileProvider> log)
+    public WtProfileProvider(ILogger<WtProfileProvider> log, TerminalHost host)
     {
         _log = log;
+        _host = host;
     }
 
-    private static IEnumerable<string> CandidatePaths()
+    private IEnumerable<string> CandidatePaths()
     {
+        // With a private host, only its profiles exist for launches; offering the Store WT's
+        // would let the picker name a profile the host does not have (ADR-0021).
+        if (_host.SettingsFile is { } hostSettings)
+        {
+            yield return hostSettings;
+            yield break;
+        }
+
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         yield return Path.Combine(local, @"Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json");
         yield return Path.Combine(local, @"Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json");
