@@ -1,6 +1,22 @@
 # Project Progress
 
 ## Current Focus
+M5 (private terminal host) code-complete on branch `private-terminal-host`: no adoption by
+title (ADR-0020); terminals launch from a portable WT and only its windows can be bound,
+adopted or imported (ADR-0021). 163/163 tests. Spike passed (separate process, settings in
+`wt\settings\settings.json`); everything below needs hardware checks.
+
+## M5 Checks
+- [ ] Spike leftover: Store WT on `"windowingBehavior": "useExisting"`, a Switchboard terminal open → `wt` from Start opens in a Store window, never as a tab in the Switchboard one
+- [ ] Copy your profiles (Ubuntu, PowerShell, …) into `%LOCALAPPDATA%\Switchboard\wt\settings\settings.json`
+- [ ] Settings → Terminals: set the host folder to `%LOCALAPPDATA%\Switchboard\wt` → no red error; type a bad path → error shows; clear it → error goes
+- [ ] Strip click launches each terminal in the portable WT (`Get-Process WindowsTerminal | select Id,Path` shows the portable path); colors, status rules, thumbnails, attention pulse, hide-from-taskbar all still work
+- [ ] Open a Store WT window and retitle it to a registered name (`$Host.UI.RawUI.WindowTitle = 'anvil'`), restart Switchboard → it is not bound, not colored, keeps its taskbar button
+- [ ] Rail "Unbound" and Settings import list only portable-WT windows (open one with Ctrl+Shift+N inside a Switchboard terminal); Store WT windows never appear
+- [ ] Restart Switchboard with terminals running → all rebind by handle (log: "Recovered N windows by handle")
+- [ ] Ctrl+Alt+N picker offers the portable WT's profiles
+
+### Superseded focus (M4)
 M4 code-complete on branch `m4-settings-ui`: the settings window (Terminals / Edge strip /
 Hotkeys / Status rules), stolen-chord badges, and bulk import from running windows — ADR-0018,
 143/143 tests. Rendering and live-apply were verified by screenshot automation; the four slice
