@@ -95,8 +95,11 @@
   .card .sub{font:11px var(--mono);color:#8b93a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-left:14px}
   .card .key{font:11px var(--mono);color:#8b93a3;border:1px solid #384056;border-radius:4px;padding:1px 5px;margin-left:auto}
   .card.busy .sub::after{content:" ●";color:var(--c)}
-  .rail .foot{padding:8px 12px;border-top:1px solid #2c3140;display:flex;gap:8px;font-size:11px;color:#9aa3b2}
-  .rail .foot .btn{border:1px solid #384056;border-radius:4px;padding:3px 8px;color:#dfe3ea}
+  /* The foot is one "…" (More) button: New terminal, Adopt window, Settings, etc. live in its
+     menu (ADR-0012 amendment 2026-11-22). Vertical edges: a small row at the bottom. */
+  .rail .more{padding:4px 8px;display:flex;justify-content:flex-end}
+  .rail .more .btn{width:22px;height:22px;display:grid;place-items:center;border-radius:4px;color:#9aa3b2;font-size:14px;line-height:1;cursor:pointer}
+  .rail .more .btn:hover{background:rgba(255,255,255,.08);color:#dfe3ea}
 
   /* top-edge variant */
   .desktop.top .strip{left:0;right:0;top:0;bottom:auto;width:auto;height:8px;flex-direction:row}
@@ -106,7 +109,9 @@
   .desktop.top .rail.open{transform:none}
   .desktop.top .rail .list{flex-direction:row;overflow-x:auto}
   .desktop.top .card{width:204px;flex:none;align-content:start}
-  .desktop.top .rail .foot{border-top:0;border-left:1px solid #2c3140;flex-direction:column;justify-content:center;padding:0 14px}
+  /* Top edge: its own 28px slot at the right end. It cannot overlay a card — DWM thumbnails
+     composite above the rail's own visuals. */
+  .desktop.top .rail .more{width:28px;flex:none;padding:0;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:8px}
   .desktop.top .rail{flex-direction:row}
   .edge{display:inline-flex;border:1px solid var(--page-line);border-radius:6px;overflow:hidden;margin-left:auto}
   .edge button{border:0 !important;border-radius:0 !important;box-shadow:none !important}
@@ -183,7 +188,7 @@
     <div class="strip" id="strip" title="Hover or click to open"></div>
     <div class="rail" id="rail">
       <div class="list" id="railList"></div>
-      <div class="foot"><span class="btn">+ New  <span style="opacity:.6">Ctrl+Alt+N</span></span></div>
+      <div class="more"><span class="btn" title="More: New terminal, Adopt window, Settings…">…</span></div>
     </div>
 
     <!-- Concept C -->
