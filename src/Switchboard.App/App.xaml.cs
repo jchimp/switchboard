@@ -63,6 +63,7 @@ public partial class App : Application
         services.AddSingleton<PickerViewModel>();
         services.AddSingleton<Picker.PickerWindow>();
         services.AddSingleton<SettingsApplyQueue>();
+        services.AddSingleton<SettingsGeneralViewModel>();
         services.AddSingleton<SettingsTerminalsViewModel>();
         services.AddSingleton<SettingsStripViewModel>();
         services.AddSingleton<SettingsStatusViewModel>();
@@ -74,7 +75,8 @@ public partial class App : Application
         // and MS.DI does not resolve Func<T> parameters on its own.
         services.AddSingleton(sp => new Settings.SettingsWindow(
             sp.GetRequiredService<SettingsViewModel>(),
-            sp.GetRequiredService<ImportViewModel>));
+            sp.GetRequiredService<ImportViewModel>,
+            sp.GetRequiredService<ILogger<Settings.SettingsWindow>>()));
         services.AddSingleton(sp => new SettingsLauncher(sp.GetRequiredService<Settings.SettingsWindow>));
         _services = services.BuildServiceProvider();
 

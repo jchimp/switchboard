@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:Switchboard.App.ViewModels"
         xmlns:settings="clr-namespace:Switchboard.App.Settings"
         Title="Switchboard — Settings"
-        Width="1140" Height="700" MinWidth="900" MinHeight="520"
+        Width="1240" Height="760" MinWidth="900" MinHeight="520"
         WindowStartupLocation="CenterScreen"
         Background="#FF202329"
         TextOptions.TextFormattingMode="Display">
@@ -155,37 +155,40 @@
           <TextBlock Style="{StaticResource PageSub}"
                      Text="One row per named Windows Terminal window. Order here is the order on the strip; jump keys are set per terminal." />
 
-          <TextBlock Text="Terminal host folder (portable Windows Terminal)" Style="{StaticResource FieldLabel}" />
-          <!-- Left + fixed width: MaxWidth with Stretch centers the box on a wide page. -->
-          <TextBox Style="{StaticResource MonoField}" Width="520" HorizontalAlignment="Left"
-                   Text="{Binding TerminalHostFolder, UpdateSourceTrigger=PropertyChanged}" />
-          <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,14"
-                     Text="Switchboard launches from here and only manages this copy's windows, so terminals you open yourself are never touched. Empty: the installed Windows Terminal, and any of its windows can be adopted. Applies to new launches." />
-          <TextBlock Style="{StaticResource Hint}" Foreground="{StaticResource SettingsError}" Margin="0,-8,0,14"
-                     Text="No wt.exe in this folder. Launches will fail until it is fixed or cleared."
-                     Visibility="{Binding HostFolderMissing, Converter={StaticResource BoolToVis}}" />
-
-          <!-- Appearance import (ADR-0022): shown only when there is a host and an installed WT. -->
-          <StackPanel Margin="0,0,0,14" Visibility="{Binding CanImportAppearance, Converter={StaticResource BoolToVis}}">
-            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6"
-                       Text="The terminal host uses Windows Terminal's default look. Import your fonts, colors and opacity from the installed Windows Terminal."
-                       Visibility="{Binding HostLooksUnstyled, Converter={StaticResource BoolToVis}}" />
-            <Button Style="{StaticResource GhostButton}" HorizontalAlignment="Left"
-                    Content="Import appearance from installed Windows Terminal"
-                    ToolTip="Copies fonts, colors, opacity and themes into the terminal host. Overwrites the host's appearance; command lines and profiles are not touched. The old file is kept as settings.json.switchboard.bak."
-                    Command="{Binding ImportAppearanceCommand}" />
-            <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" Text="{Binding AppearanceResult}"
-                       MaxWidth="640" HorizontalAlignment="Left" />
-          </StackPanel>
         </StackPanel>
 
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="1" x:Name="TerminalsSplit" SizeChanged="CapEditorWidth">
+          <!-- List | splitter | editor. Min widths match SettingsBounds; the editor's width is
+               remembered in switchboard.json (settingsWindow.editorWidth). -->
           <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="330" />
+            <ColumnDefinition Width="*" MinWidth="300" />
+            <ColumnDefinition Width="14" />
+            <ColumnDefinition x:Name="EditorColumn" Width="440" MinWidth="330" />
           </Grid.ColumnDefinitions>
 
-          <DockPanel Grid.Column="0" Margin="0,0,18,0">
+          <GridSplitter Grid.Column="1" Width="14" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                        ResizeBehavior="PreviousAndNext" ResizeDirection="Columns" Focusable="False"
+                        Cursor="SizeWE" ToolTip="Drag to resize the list and the editor">
+            <GridSplitter.Template>
+              <ControlTemplate TargetType="GridSplitter">
+                <!-- A wide transparent grab area with a thin visible line. -->
+                <Grid Background="Transparent">
+                  <Border x:Name="Line" Width="2" CornerRadius="1" Margin="0,8"
+                          Background="{StaticResource SettingsLine}" />
+                </Grid>
+                <ControlTemplate.Triggers>
+                  <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Line" Property="Background" Value="{StaticResource SettingsAccent}" />
+                  </Trigger>
+                  <Trigger Property="IsDragging" Value="True">
+                    <Setter TargetName="Line" Property="Background" Value="{StaticResource SettingsAccent}" />
+                  </Trigger>
+                </ControlTemplate.Triggers>
+              </ControlTemplate>
+            </GridSplitter.Template>
+          </GridSplitter>
+
+          <DockPanel Grid.Column="0">
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10" LastChildFill="False">
               <Button DockPanel.Dock="Left" Style="{StaticResource PrimaryButton}" Content="+ Add terminal"
                       Command="{Binding AddCommand}" />
@@ -315,7 +318,7 @@
           </DockPanel>
 
           <!-- Editor -->
-          <Border Grid.Column="1" Background="{StaticResource SettingsApp2}"
+          <Border Grid.Column="2" Background="{StaticResource SettingsApp2}"
                   BorderBrush="{StaticResource SettingsLine}" BorderThickness="1" CornerRadius="8"
                   Padding="14,12">
             <Grid>
@@ -531,6 +534,39 @@
           </Border>
         </Grid>
       </Grid>
+
+      <!-- ===================== GENERAL ===================== -->
+      <ScrollViewer DataContext="{Binding General}" VerticalScrollBarVisibility="Auto"
+                    Visibility="{Binding DataContext.IsGeneral, RelativeSource={RelativeSource AncestorType=Window},
+                                 Converter={StaticResource BoolToVis}}">
+        <StackPanel MaxWidth="620" HorizontalAlignment="Left" Margin="0,0,12,0">
+          <TextBlock Text="General" Style="{StaticResource PageTitle}" />
+          <TextBlock Style="{StaticResource PageSub}"
+                     Text="Where Switchboard's terminals come from, and how they look." />
+
+          <TextBlock Text="Terminal host folder (portable Windows Terminal)" Style="{StaticResource FieldLabel}" />
+          <TextBox Style="{StaticResource MonoField}"
+                   Text="{Binding TerminalHostFolder, UpdateSourceTrigger=PropertyChanged}" />
+          <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,14"
+                     Text="Switchboard launches from here and only manages this copy's windows, so terminals you open yourself are never touched. Empty: the installed Windows Terminal, and any of its windows can be adopted. Applies to new launches." />
+          <TextBlock Style="{StaticResource Hint}" Foreground="{StaticResource SettingsError}" Margin="0,-8,0,14"
+                     Text="No wt.exe in this folder. Launches will fail until it is fixed or cleared."
+                     Visibility="{Binding HostFolderMissing, Converter={StaticResource BoolToVis}}" />
+
+          <!-- Appearance import (ADR-0022): shown only when there is a host and an installed WT. -->
+          <StackPanel Margin="0,0,0,14" Visibility="{Binding CanImportAppearance, Converter={StaticResource BoolToVis}}">
+            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6"
+                       Text="The terminal host uses Windows Terminal's default look. Import your fonts, colors and opacity from the installed Windows Terminal."
+                       Visibility="{Binding HostLooksUnstyled, Converter={StaticResource BoolToVis}}" />
+            <Button Style="{StaticResource GhostButton}" HorizontalAlignment="Left"
+                    Content="Import appearance from installed Windows Terminal"
+                    ToolTip="Copies fonts, colors, opacity and themes into the terminal host. Overwrites the host's appearance; command lines and profiles are not touched. The old file is kept as settings.json.switchboard.bak."
+                    Command="{Binding ImportAppearanceCommand}" />
+            <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" Text="{Binding AppearanceResult}"
+                       MaxWidth="640" HorizontalAlignment="Left" />
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
 
       <!-- ===================== EDGE STRIP ===================== -->
       <ScrollViewer DataContext="{Binding Strip}" VerticalScrollBarVisibility="Auto"

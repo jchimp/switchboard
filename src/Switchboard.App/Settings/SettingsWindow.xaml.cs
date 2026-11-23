@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using Microsoft.Extensions.Logging;
+using Switchboard.Core.Registry;
 using Switchboard.App.ViewModels;
 using Switchboard.Windows;
 
@@ -18,13 +20,19 @@ public partial class SettingsWindow : Window
 {
     private readonly SettingsViewModel _vm;
     private readonly Func<ImportViewModel> _importViewModel;
+    private readonly ILogger<SettingsWindow> _log;
 
-    public SettingsWindow(SettingsViewModel vm, Func<ImportViewModel> importViewModel)
+    public SettingsWindow(SettingsViewModel vm, Func<ImportViewModel> importViewModel, ILogger<SettingsWindow> log)
     {
         _vm = vm;
         _importViewModel = importViewModel;
+        _log = log;
         DataContext = vm;
         InitializeComponent();
+
+        // Before the first Show(): CenterScreen centers the window it is given, so it must be
+        // given the remembered size, not grow from the default's corner afterwards.
+        ApplyLayout(vm.Layout);
         SourceInitialized += (_, _) => DarkTitleBar.Apply(new WindowInteropHelper(this).Handle);
         vm.Terminals.ImportRequested += ShowImportDialog;
 
@@ -33,6 +41,7 @@ public partial class SettingsWindow : Window
         {
             if (e.NewValue is true)
             {
+                vm.General.RefreshFromDisk();
                 vm.Terminals.RefreshFromDisk();
             }
         };
@@ -168,6 +177,9 @@ public partial class SettingsWindow : Window
 
     protected override async void OnClosing(CancelEventArgs e)
     {
+        // Read before Hide(): a hidden window still has its size, but keep the order obvious.
+        _vm.RememberLayout(CurrentLayout());
+
         // A DI singleton whose view models stay subscribed to the session: hide it rather than
         // destroying the HWND a later Open() would need. Real shutdown still tears it down.
         if (Application.Current?.Dispatcher.HasShutdownStarted != true)
@@ -179,6 +191,64 @@ public partial class SettingsWindow : Window
         base.OnClosing(e);
 
         // Anything still sitting in the debounce belongs in the file before we go quiet.
-        await _vm.FlushAsync();
+        // async void (an override): a failed flush must be logged, not crash the app.
+        try
+        {
+            await _vm.FlushAsync();
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Saving settings as the window closed failed");
+        }
+    }
+
+    /// <summary>
+    /// The splitter honours both columns' minimums while dragging; resizing the window does not.
+    /// Keep the editor narrow enough that the list keeps its MinWidth, so shrinking the window
+    /// after widening the editor never pushes the editor's fields off the edge.
+    /// </summary>
+    private void CapEditorWidth(object sender, SizeChangedEventArgs e)
+    {
+        if (TerminalsSplit.ActualWidth <= 0 || !EditorColumn.Width.IsAbsolute)
+        {
+            return; // collapsed (another page is showing), or not laid out yet
+        }
+
+        var list = TerminalsSplit.ColumnDefinitions[0].MinWidth;
+        var splitter = TerminalsSplit.ColumnDefinitions[1].ActualWidth;
+        var max = Math.Max(EditorColumn.MinWidth, TerminalsSplit.ActualWidth - list - splitter);
+        if (EditorColumn.Width.Value > max)
+        {
+            EditorColumn.Width = new GridLength(max);
+        }
+    }
+
+    /// <summary>Restores the remembered size and the Terminals page's list/editor split.</summary>
+    private void ApplyLayout(SettingsWindowLayout layout)
+    {
+        if (WindowState == WindowState.Normal)
+        {
+            Width = layout.Width;
+            Height = layout.Height;
+        }
+
+        EditorColumn.Width = new GridLength(layout.EditorWidth);
+    }
+
+    /// <summary>
+    /// The size and split as the user left them. A maximized window reports its normal-state
+    /// size through RestoreBounds, so un-maximizing next time lands where it was.
+    /// </summary>
+    private SettingsWindowLayout CurrentLayout()
+    {
+        var bounds = WindowState == WindowState.Normal ? new Rect(0, 0, ActualWidth, ActualHeight) : RestoreBounds;
+        return new SettingsWindowLayout
+        {
+            Width = (int)Math.Round(bounds.Width),
+            Height = (int)Math.Round(bounds.Height),
+            // The column's set width, not ActualWidth: closing from another page leaves the
+            // Terminals grid collapsed, where ActualWidth is 0. The splitter keeps Width current.
+            EditorWidth = (int)Math.Round(EditorColumn.Width.IsAbsolute ? EditorColumn.Width.Value : EditorColumn.ActualWidth),
+        };
     }
 }
