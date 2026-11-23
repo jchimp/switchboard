@@ -76,6 +76,7 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 
 ### Terminal host
 - R28. Optionally (`terminalHost.folder`, unset by default) Switchboard runs its terminals in a private portable Windows Terminal in that folder. Only windows whose process is that copy's `WindowsTerminal.exe` can be bound, adopted, imported, or listed as unbound; the user's own WT windows are never touched, and a Start-menu WT can never open a tab in a Switchboard window. Unset: `wt.exe` on PATH and any WT window can be bound (ADR-0021).
+- R29. Settings → Terminals can import the installed Windows Terminal's appearance (font, colors, cursor, opacity, acrylic, schemes, themes, window size) into the terminal host's settings.json, one shot, on the user's request. It overwrites the host's appearance for `profiles.defaults` and profiles matched by guid or name; it never copies command lines, starting folders, the profile list, key bindings, startup/window behaviour or `tabColor`. The original file is kept as `settings.json.switchboard.bak` (written once, by the first import). A hint offers it when the host still has WT's default look (ADR-0022).
 
 ## Non-functional
 

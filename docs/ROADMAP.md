@@ -47,6 +47,8 @@ Milestones are vertical slices; each one is usable on its own.
   terminal, Adopt window, Settings, Reapply colors, Reload registry, Quit. With the unbound
   list usually empty after ADR-0021, the space goes back to the cards, and on the top edge
   in Centered mode the strip segments line up with the cards (ADR-0012 amendment).
+- Import the installed WT's appearance into the terminal host with one button: fonts,
+  colors, opacity, schemes; never command lines or profiles (ADR-0022, PRD R29).
 
 ## M6 — Polish & ship (was M5)
 - Named-pipe status source with sample `pwsh` and `bash` hooks (PRD R19 source 4). Deferred
