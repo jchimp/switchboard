@@ -66,3 +66,22 @@ unfocused, tab-color toggle, rail thumbnail size, theme, "hide strip 30 min", "l
   mockup stays as the design record; this ADR is the reason for the gap.
 - `DWMWA_USE_IMMERSIVE_DARK_MODE` is a no-op on pre-Win11 builds: the window gets a light
   caption and works normally. The same floor the frame colorizer already accepts.
+
+## Amendment (2026-11-22): a General page, and a Terminals page with room to edit
+
+The Terminals page had grown a header (the terminal host folder from ADR-0021 and the
+appearance import from ADR-0022) above a fixed 330-DIP editor. Editing a terminal, the main
+reason to open Settings, had the least room.
+
+- **General page**, first in the nav: the terminal host folder and the appearance import.
+  Settings still opens on Terminals.
+- **Terminals page** is the list and the editor only, with a splitter between them. The list
+  keeps at least 300 DIPs and the editor at least 330; the editor now defaults to 440.
+- **Size and split are remembered** in `switchboard.json` (`settingsWindow`: width, height,
+  editorWidth), saved once as the window hides and only when they changed. The registry stays
+  the only durable store (invariant 3). `SettingsBounds.Clamp` only enforces the window's and
+  the editor's minimums. How wide the editor may be depends on the live window, so the window
+  caps it against its real grid on every resize; that keeps the list at its minimum when the
+  window shrinks after a wide split, and keeps a maximized user's wide split intact on save.
+  The remembered size is applied before the first show, so the window centers at that size.
+  A maximized window saves its restored size.

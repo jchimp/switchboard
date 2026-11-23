@@ -6,6 +6,15 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+### Changed
+
+- **Settings has a General tab.** The terminal host folder and the appearance import moved
+  there. The Terminals tab is now just the terminal list and its editor, with a draggable
+  splitter between them and a wider editor. Settings remembers its size and the split.
+- **Rail cards are easier to read.** The terminal name is larger, the shell name ("pwsh") is
+  gone from the line under it, and the jump number sits at the card's right edge with the
+  edit pencil to its left.
+
 ## 0.1.1 (2026-11-22)
 
 ### Changed

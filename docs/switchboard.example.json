@@ -2,6 +2,7 @@
   "version": 1,
   "hideFromTaskbar": false,
   "terminalHost": { "folder": "%LOCALAPPDATA%\\Switchboard\\wt" },
+  "settingsWindow": { "width": 1240, "height": 760, "editorWidth": 440 },
   "strip": { "edge": "top", "thickness": 8, "activeThickness": 14, "openRailOnHover": true, "reserveScreenSpace": false,
     "autoHide": false, "hiddenThickness": 2, "collapseDelayMs": 800, "topWidth": "centered", "clickMinimizesFocused": true },
   "hotkeys": { "openSwitcher": "Ctrl+`", "newTerminal": "Ctrl+Alt+N", "newTerminalQuiet": "Ctrl+Alt+Shift+N", "jumpPrefix": "Ctrl+Alt" },
