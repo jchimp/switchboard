@@ -4,6 +4,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using Switchboard.App.Services;
 using Switchboard.App.ViewModels;
@@ -41,7 +42,7 @@ public partial class RailWindow : Window, IDisposable
         _thumbLog = thumbLog;
         InitializeComponent();
         DataContext = vm;
-        RailFrame.ContextMenu = TrackMenu(SwitchboardMenu.Build(vm, beforeNewTerminal: CloseRail));
+        SwitchboardMenu.AttachTo(RailFrame, TrackMenu(SwitchboardMenu.Build(vm, beforeNewTerminal: CloseRail)));
         SourceInitialized += (_, _) =>
         {
             // Same contract as the strip: invisible to Alt-Tab, never steals focus (ADR-0012).
@@ -421,9 +422,7 @@ public partial class RailWindow : Window, IDisposable
         _morePressed = false;
         var menu = TrackMenu(
             SwitchboardMenu.Build(_vm, beforeNewTerminal: CloseRail, adopt: BuildAdoptMenu(_vm.UnboundWindows())));
-        menu.PlacementTarget = MoreButton;
-        menu.Placement = PlacementMode.Bottom;
-        menu.IsOpen = true;
+        SwitchboardMenu.OpenUnder(menu, MoreButton);
     }
 
     private void MoreButton_Pressed(object sender, MouseButtonEventArgs e) => _morePressed = true;
@@ -468,12 +467,15 @@ public partial class RailWindow : Window, IDisposable
         }
 
         var newItem = new MenuItem { Header = "New terminal…" };
-        newItem.Click += (_, _) =>
+        // SystemIdle: after the menu has handed focus back (SwitchboardMenu restores at
+        // ApplicationIdle). The popup remembers the foreground to return to; opened any sooner
+        // it would remember the closing menu.
+        newItem.Click += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.SystemIdle, () =>
         {
             var seed = _vm.AdoptSeed();
             ShowEditPopup(MoreButton, "Adopt as new terminal", seed.Name, seed.Color,
                 (name, color) => _vm.AdoptAsNewAsync(window.Hwnd, name, color));
-        };
+        });
         parent.Items.Add(newItem);
     }
 

@@ -49,7 +49,7 @@ public partial class StripWindow : Window
 
         InitializeComponent();
         DataContext = vm;
-        StripFrame.ContextMenu = SwitchboardMenu.Build(vm);
+        SwitchboardMenu.AttachTo(StripFrame, SwitchboardMenu.Build(vm));
         SourceInitialized += OnSourceInitialized;
         Loaded += (_, _) =>
         {

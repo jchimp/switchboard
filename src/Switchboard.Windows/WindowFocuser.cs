@@ -8,6 +8,13 @@ public static class WindowFocuser
     /// <summary>The current foreground window; the edit popup restores this on close (ADR-0014).</summary>
     public static nint CurrentForeground() => NativeMethods.GetForegroundWindow();
 
+    /// <summary>
+    /// True for windows that must never hold focus: the strip and rail (ADR-0006/0012). A menu
+    /// closing over them hands focus back instead of leaving it there.
+    /// </summary>
+    public static bool IsNonActivating(nint hwnd) =>
+        hwnd != 0 && (NativeMethods.GetWindowLongPtr(hwnd, NativeMethods.GWL_EXSTYLE) & NativeMethods.WS_EX_NOACTIVATE) != 0;
+
     /// <summary>True when <paramref name="hwnd"/> is the foreground window right now.</summary>
     public static bool IsForeground(nint hwnd) => hwnd != 0 && NativeMethods.GetForegroundWindow() == hwnd;
 
