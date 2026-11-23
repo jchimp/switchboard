@@ -1,0 +1,61 @@
+# Changelog
+
+All notable changes to Switchboard are recorded here. Add entries under
+`## Unreleased` as you work; `scripts/release.ps1 -Version <x.y.z> -Apply` turns
+that section into the release section and its text becomes the GitHub release notes.
+
+## Unreleased
+
+## 0.1.0 (2026-11-22)
+
+First release. Everything from milestones M0 to M5.
+
+### Added
+
+- **Registry.** `%APPDATA%\Switchboard\switchboard.json` holds the named terminals:
+  profile, shell, working folder, startup command, color, jump key. Saves are atomic,
+  with a backup.
+- **Edge strip.** An 8 px strip on the top, left or right screen edge with one colored
+  segment per terminal. The active one glows, one that wants attention pulses. It never
+  takes focus. Optional auto-hide to a colored sliver; closed terminals show grey-tinted.
+- **Colored frames.** Each terminal's color is painted onto its window border
+  (Windows 11) and passed to Windows Terminal as the tab color.
+- **Hotkeys.** `Ctrl+Alt+1…9` jump, `Ctrl+Alt+N` new terminal, `Ctrl+Alt+Space` jump to
+  the terminal that is waiting on you. All can be rebound.
+- **Status.** Working, idle and attention are inferred from window titles, taskbar
+  flashes and live-thumbnail motion. No shell setup needed. Attention stays until you
+  focus the terminal.
+- **Rail.** Slides out from the strip with live thumbnails of each terminal. Rename and
+  recolor from the rail. Optional app-bar mode and hide-from-taskbar for bound windows.
+- **Overlay switcher** (`` Ctrl+` ``). Thumbnail grid with fuzzy filter, 1–9, arrows,
+  Enter and Esc.
+- **Quick-launch picker** (`Ctrl+Alt+N`). Tab cycles Windows Terminal profiles, remembers
+  the last folder. `Ctrl+Alt+Shift+N` launches without the picker.
+- **Settings window.** Terminals table and editor, edge strip, hotkeys and status rules.
+  Changes apply live. Hotkey rows show when another application owns a chord. Bulk import
+  from running windows.
+- **Private terminal host** (#3, ADR-0021). Set `terminalHost.folder` to a portable
+  Windows Terminal copy and Switchboard launches its terminals there. Only that copy's
+  windows can be bound, adopted or imported, and Start-menu terminals can no longer open
+  as tabs inside them.
+- **"…" menu** (#4). Replaces the rail's foot: New terminal, Adopt window, Settings,
+  Reapply colors, Reload registry, Quit. The strip and rail right-click menus share it.
+  Menus now take focus while open, so Esc and click-away close them.
+- **Import appearance** (ADR-0022). A Settings → Terminals button copies font, colors,
+  cursor, opacity, acrylic and padding from the installed Windows Terminal into the
+  private host. It never copies command lines or profiles.
+
+### Changed
+
+- **No adoption by title** (#3, ADR-0020). On start and on registry reload, Switchboard
+  binds only the window handle it saved. It no longer takes over any terminal whose title
+  starts with a registered name. After a reboot, running terminals show as unbound and
+  need one click to adopt.
+- On the top edge in Centered mode, strip segments now line up with the rail cards (#4).
+
+### Fixed
+
+- The rail could come out half a pixel short at fractional scaling and drop the last
+  card (#4).
+- Live previews scrolled past the rail's list edge drew over the "…" button (#4).
+- Clicking "…" to close its menu opened it again (#4).
