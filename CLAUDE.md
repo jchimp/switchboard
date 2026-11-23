@@ -51,6 +51,7 @@ Registry lives at `%APPDATA%\Switchboard\switchboard.json`. A sample is in `docs
 - New status source → feed it into `StatusEngine` via a new public method; add an engine test; document it in PRD R19.
 - New Win32 call → `NativeMethods.cs`, then a small typed wrapper (`FrameColorizer`, `WindowFocuser` are the pattern).
 - Anything that changes the shape of the product → an ADR first, in `docs/adr/`, numbered, with Status/Context/Decision/Consequences.
+- Anything a user can see or feel (feature, behaviour change, fix of a released bug, removal) → an entry under `## Unreleased` in `CHANGELOG.md`, in the same branch as the change, under `### Added` / `### Changed` / `### Fixed` / `### Removed`. Write it for the user, not the code: what they see, in a short bold lead plus one or two sentences. Skip pure refactors, tests, docs-only changes and fixes to work that was never released. `scripts/release.ps1` turns this section into the release notes, so an empty or stale section ships as empty or stale notes.
 
 ## Things not to do
 
