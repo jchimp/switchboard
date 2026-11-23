@@ -6,6 +6,21 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+### Added
+
+- **Installer.** The release zip now has `install.ps1`. Run it from the unzipped folder to
+  install Switchboard for your user only (no admin) with a Start Menu shortcut and an entry in
+  Settings > Apps to uninstall it. Running it again upgrades in place. `-StartAtLogin` starts
+  Switchboard when you sign in, and `-WithTerminalHost` downloads and sets up the private
+  Windows Terminal copy for you. Your terminals and settings are never touched.
+
+### Changed
+
+- **The terminal host is found on its own.** With Settings → General → Terminal host folder
+  left empty, Switchboard now uses `%LOCALAPPDATA%\Switchboard\wt` if it has `wt.exe`,
+  instead of the installed Windows Terminal. A folder you set still wins. To go back to the
+  installed Windows Terminal, delete or rename that folder.
+
 ## 0.1.2 (2026-11-22)
 
 ### Changed

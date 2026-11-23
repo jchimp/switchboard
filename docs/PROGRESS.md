@@ -1,6 +1,23 @@
 # Project Progress
 
 ## Current Focus
+Per-user installer on branch `installer` (ADR-0023): `install.ps1` and `uninstall.ps1` ship in
+the release zip. Dry runs pass on Windows PowerShell 5.1 and PowerShell 7, and the pinned WT
+download, hash and zip layout were checked. A real install and uninstall have not run yet.
+
+## Installer checks
+- [ ] `.\scripts\release.ps1 -Apply` → the zip has `install.ps1` and `uninstall.ps1` at its root
+- [ ] Unzip in Explorer, run `install.ps1` from Windows PowerShell → Start Menu has Switchboard, it starts with no SmartScreen prompt, Settings > Apps lists Switchboard 0.x with its icon
+- [ ] Same from a PowerShell 7 window (`powershell -File ...`) → no `Get-FileHash` error
+- [ ] With Switchboard running and terminals open, install a newer zip → it stops, upgrades, starts again, and the terminals rebind
+- [ ] `-StartAtLogin` → Startup shortcut exists; reinstall without it → shortcut is kept
+- [ ] `-WithTerminalHost` on a machine with no host → `%LOCALAPPDATA%\Switchboard\wt` has `wt.exe` and `.portable`; with the Settings > General folder empty, a launch runs from it (`Get-Process WindowsTerminal | select Path`) and the log says "(default, no folder set)"
+- [ ] Folder empty and no `%LOCALAPPDATA%\Switchboard\wt` (rename it) → launches use the installed WT as before
+- [ ] Type a bad folder in Settings > General while the default exists → the red "No wt.exe" error shows; it does not fall back to the default
+- [ ] Uninstall from Settings > Apps → install folder, both shortcuts and the Apps entry are gone; `%APPDATA%\Switchboard` and `wt` are still there
+- [ ] `-InstallDir` pointing at a folder with other files → it refuses and changes nothing
+
+### Superseded focus (settings layout)
 Settings layout and rail card polish on branch `settings-general-rail-card` (ADR-0018
 amendment 2026-11-22): a General tab for the host folder and appearance import, a Terminals
 tab with a list/editor splitter, remembered window size and split, and a clearer rail card.

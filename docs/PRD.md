@@ -75,14 +75,14 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 - R27. Running terminal-host windows (R28) that are not bound to a terminal can be imported in bulk from the settings window: proposed name and color per window, edited before committing, registered and bound in one write.
 
 ### Terminal host
-- R28. Optionally (`terminalHost.folder`, unset by default) Switchboard runs its terminals in a private portable Windows Terminal in that folder. Only windows whose process is that copy's `WindowsTerminal.exe` can be bound, adopted, imported, or listed as unbound; the user's own WT windows are never touched, and a Start-menu WT can never open a tab in a Switchboard window. Unset: `wt.exe` on PATH and any WT window can be bound (ADR-0021).
+- R28. Optionally (`terminalHost.folder`, unset by default) Switchboard runs its terminals in a private portable Windows Terminal in that folder. Only windows whose process is that copy's `WindowsTerminal.exe` can be bound, adopted, imported, or listed as unbound; the user's own WT windows are never touched, and a Start-menu WT can never open a tab in a Switchboard window. Unset: `%LOCALAPPDATA%\Switchboard\wt` when it has `wt.exe` (ADR-0023), otherwise `wt.exe` on PATH and any WT window can be bound (ADR-0021).
 - R29. Settings → Terminals can import the installed Windows Terminal's appearance (font, colors, cursor, opacity, acrylic, schemes, themes, window size) into the terminal host's settings.json, one shot, on the user's request. It overwrites the host's appearance for `profiles.defaults` and profiles matched by guid or name; it never copies command lines, starting folders, the profile list, key bindings, startup/window behaviour or `tabColor`. The original file is kept as `settings.json.switchboard.bak` (written once, by the first import). A hint offers it when the host still has WT's default look (ADR-0022).
 
 ## Non-functional
 
 - Startup under 500 ms to strip visible.
 - Idle CPU effectively zero: event-driven tracking, one 1 s timer.
-- No admin rights. No installer required for v0 (single-folder publish).
+- No admin rights. The release zip carries a per-user `install.ps1` (no admin, `%LOCALAPPDATA%\Programs\Switchboard`, uninstall from Settings > Apps); running the exe from the unzipped folder also works (ADR-0023).
 - All logic outside Win32/WPF is unit-tested and runs on any OS.
 
 ## Success criteria for v1

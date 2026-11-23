@@ -36,7 +36,10 @@
     ExtraPayload = @(
         'README.md'
         'LICENSE'
-        # 'install.ps1'
+        # Per-user installer (ADR-0023). install.ps1 copies uninstall.ps1 into
+        # the install folder, where Settings > Apps runs it.
+        'install.ps1'
+        'uninstall.ps1'
         # 'config/'
     )
 
