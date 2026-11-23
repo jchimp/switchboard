@@ -35,6 +35,10 @@ public partial class RailWindow : Window, IDisposable
     private bool _menuOpen;
     private bool _morePressed;
 
+    // Long enough to swallow the dismissing press, short enough that a deliberate reopen works.
+    private const long ReopenGuardMs = 500;
+    private long _moreMenuClosedAt = long.MinValue / 2;
+
     public RailWindow(RailViewModel vm, TerminalSession session, ILogger<WindowThumbnail> thumbLog)
     {
         _vm = vm;
@@ -412,8 +416,7 @@ public partial class RailWindow : Window, IDisposable
     /// </summary>
     private void MoreButton_Click(object sender, MouseButtonEventArgs e)
     {
-        // Open only on a press that started here. Clicking "…" while its menu is open: the
-        // press goes to the popup and closes it, and the release must not reopen it.
+        // Open only on a press that started here (a drag that ends on "…" is not a click).
         if (!_morePressed)
         {
             return;
@@ -422,10 +425,23 @@ public partial class RailWindow : Window, IDisposable
         _morePressed = false;
         var menu = TrackMenu(
             SwitchboardMenu.Build(_vm, beforeNewTerminal: CloseRail, adopt: BuildAdoptMenu(_vm.UnboundWindows())));
+        menu.Closed += (_, _) => _moreMenuClosedAt = Environment.TickCount64;
         SwitchboardMenu.OpenUnder(menu, MoreButton);
     }
 
-    private void MoreButton_Pressed(object sender, MouseButtonEventArgs e) => _morePressed = true;
+    private void MoreButton_Pressed(object sender, MouseButtonEventArgs e)
+    {
+        // Clicking "…" to dismiss its own menu: the press closes the menu, then WPF hands the
+        // same press on to the button (the click landed inside the app), which would reopen
+        // it. That re-delivery arrives within milliseconds of the close; ignore presses for a
+        // short window after it.
+        if (Environment.TickCount64 - _moreMenuClosedAt < ReopenGuardMs)
+        {
+            return;
+        }
+
+        _morePressed = true;
+    }
 
     private void MoreButton_Left(object sender, MouseEventArgs e) => _morePressed = false;
 
