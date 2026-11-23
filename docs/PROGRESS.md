@@ -6,13 +6,13 @@ amendment 2026-11-22): a General tab for the host folder and appearance import, 
 tab with a list/editor splitter, remembered window size and split, and a clearer rail card.
 
 ## Settings layout and rail card checks
-- [ ] Settings opens on Terminals; the nav shows General first; General has the host folder, its hints, and the appearance import, all working as before
-- [ ] Terminals: drag the splitter both ways → the list never gets narrower than about 300 and the editor never narrower than about 330; the line turns blue on hover and while dragging
-- [ ] Resize the window → the list grows and shrinks, the editor keeps its width
-- [ ] Drag the editor wide, then shrink the window to its minimum → the editor narrows so its fields and Save stay visible; the list stays about 300
-- [ ] First open after a restart with a large saved size → the window is centered for that size, not pushed off the bottom/right
-- [ ] Close and reopen Settings, then restart Switchboard and open it again → same size and split both times; `switchboard.json` has `settingsWindow`
-- [ ] Open and close Settings without moving anything → `switchboard.json` is not rewritten (check its timestamp)
+- [x] Settings opens on Terminals; the nav shows General first; General has the host folder, its hints, and the appearance import, all working as before
+- [x] Terminals: drag the splitter both ways → the list never gets narrower than about 300 and the editor never narrower than about 330; the line turns blue on hover and while dragging
+- [x] Resize the window → the list grows and shrinks, the editor keeps its width
+- [x] Drag the editor wide, then shrink the window to its minimum → the editor narrows so its fields and Save stay visible; the list stays about 300
+- [x] First open after a restart with a large saved size → the window is centered for that size, not pushed off the bottom/right
+- [x] Close and reopen Settings, then restart Switchboard and open it again → same size and split both times; `switchboard.json` has `settingsWindow`
+- [x] Open and close Settings without moving anything → `switchboard.json` is not rewritten (check its timestamp)
 - [ ] Maximize, close, reopen → it opens at the size it had before maximizing
 - [ ] Rail cards: name is 18 pt with no line under it; hovering a card with a folder or distro set shows them in a tooltip (no empty tooltip otherwise); the busy dot shows next to the name while working; number badge at the right edge; pencil appears to its left on hover without moving the badge
 - [ ] Set Settings → Edge strip → "Rail height on the top edge" to 176 (the new default; your file keeps 190) → little space under the names, no scrollbar, every card keeps its live thumbnail, and the strip segments still line up with the cards; check at 100 % and 175 % scaling
@@ -23,15 +23,15 @@ copies the installed WT's fonts, colors, opacity and schemes into the terminal h
 button. M5 (PR #3) and the rail menu button (PR #4) are merged.
 
 ## Terminal profile panel checks (branch `terminal-profiles`)
-- [ ] Settings → Terminals → select a terminal: the profile field is a dropdown of the host's profiles (PowerShell, Windows PowerShell, Ubuntu, …)
+- [x] Settings → Terminals → select a terminal: the profile field is a dropdown of the host's profiles (PowerShell, Windows PowerShell, Ubuntu, …)
 - [ ] Open an existing terminal without touching the profile → Shell and Distro keep their saved values
 - [ ] Pick Ubuntu → Shell becomes wsl and Distro becomes Ubuntu; pick Windows PowerShell → Shell becomes windowsPowerShell; pick Git Bash → Shell stays as it was
-- [ ] The panel shows command line, starting folder, font and colors; after an appearance import the font and colors match the installed WT
+- [x] The panel shows command line, starting folder, font and colors; after an appearance import the font and colors match the installed WT
 - [ ] Type a name WT doesn't have → red "no profile by this name" hint; the panel hides
 - [ ] Set Shell to cmd, then type `WSL-dev` in the profile box: `W` auto-completes to Windows PowerShell (Shell shows windowsPowerShell for a moment), and at `WSL-dev` Shell is back to cmd
 - [ ] Change Shell by hand, then pick a profile and clear it again → Shell returns to your hand-picked value
 - [ ] A WSL profile whose command line is `wsl.exe -d Debian` sets Distro to Debian, not its profile name
-- [ ] Open settings.json → the host's file opens in your editor
+- [x] Open settings.json → the host's file opens in your editor
 - [ ] Change a profile in WT's settings, close and reopen Settings, reselect the terminal → the panel shows the change
 
 ## Appearance import checks
