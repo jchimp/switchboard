@@ -338,7 +338,7 @@
     $('railList').innerHTML = T.map((t,i)=>`
       <div class="card ${i===active?'on':''} ${t.busy?'busy':''}" style="--c:${t.c}" data-i="${i}">
         <div class="thumb"><i></i><i></i><i></i><i></i></div>
-        <div class="meta"><div class="name">${t.id}<span class="key">${i+1}</span></div><div class="sub">${t.cwd}</div></div>
+        <div class="meta" title="${t.cwd}"><div class="name" style="font-size:18px">${t.id}<span class="key">${i+1}</span></div></div>
       </div>`).join('');
   }
   function renderGrid(){

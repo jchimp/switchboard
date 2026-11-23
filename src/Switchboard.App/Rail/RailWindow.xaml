@@ -59,6 +59,7 @@
                       Margin="0,3" Padding="6" CornerRadius="6"
                       BorderThickness="1" BorderBrush="Transparent" Background="Transparent"
                       Opacity="{Binding RowOpacity}" Cursor="Hand"
+                      ToolTip="{Binding HoverDetail}"
                       MouseLeftButtonUp="Row_Click">
                 <StackPanel>
                   <!-- Thumb slot: dark background shows through when no live thumbnail is
@@ -69,20 +70,24 @@
                        composites the live thumbnail above the rail's own visuals. -->
                   <Border x:Name="ThumbSlot" Height="115" CornerRadius="3"
                           Background="#FF101010" />
-                  <!-- 4, not 5: the 14-pt name left 0.6 DIP of room in the fixed 190-DIP top rail,
-                       and a card that overflows it loses its live thumbnail. -->
-                  <Grid Margin="0,4,0,0">
+                  <!-- Name row only: folder and distro are in the card's tooltip, which buys the
+                       18-pt name its room in the fixed 190-DIP top rail (about 10 DIP to spare; a
+                       card that overflows it loses its live thumbnail). -->
+                  <Grid Margin="0,5,0,0">
                     <Grid.ColumnDefinitions>
                       <ColumnDefinition Width="*" />
                       <ColumnDefinition Width="Auto" />
                       <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
-                      <Ellipse Width="8" Height="8" Fill="{Binding Brush}" Margin="0,0,6,0"
+                      <Ellipse Width="10" Height="10" Fill="{Binding Brush}" Margin="0,0,7,0"
                                VerticalAlignment="Center" />
-                      <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
-                                 Foreground="{StaticResource RailText}"
+                      <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold"
+                                 Foreground="{StaticResource RailText}" VerticalAlignment="Center"
                                  TextTrimming="CharacterEllipsis" />
+                      <!-- Working/attention marker, moved here from the old sub-line. -->
+                      <TextBlock Text=" ●" FontSize="12" Foreground="{Binding Brush}" VerticalAlignment="Center"
+                                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
                     </StackPanel>
                     <!-- Rename/recolor affordance; revealed on row hover (ADR-0014). Hidden, not
                          Collapsed, so the number badge never shifts when it appears. -->
@@ -95,17 +100,11 @@
                             BorderBrush="{StaticResource RailBadgeBorder}" BorderThickness="1"
                             CornerRadius="4" Padding="5,1"
                             Visibility="{Binding HasJumpKey, Converter={StaticResource BoolToVis}}">
-                      <TextBlock Text="{Binding JumpKeyText}" FontSize="11"
+                      <TextBlock Text="{Binding JumpKeyText}" FontSize="12"
                                  FontFamily="Cascadia Mono,Consolas"
                                  Foreground="{StaticResource RailSub}" />
                     </Border>
                   </Grid>
-                  <StackPanel Orientation="Horizontal" Margin="14,0,0,0">
-                    <TextBlock Text="{Binding SubLine}" FontSize="11" FontFamily="Cascadia Mono,Consolas"
-                               Foreground="{StaticResource RailSub}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text=" ●" FontSize="11" Foreground="{Binding Brush}"
-                               Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
-                  </StackPanel>
                 </StackPanel>
               </Border>
               <DataTemplate.Triggers>
