@@ -6,6 +6,8 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+## 0.1.0 (2026-11-22)
+
 First release. Everything from milestones M0 to M5.
 
 ### Added
