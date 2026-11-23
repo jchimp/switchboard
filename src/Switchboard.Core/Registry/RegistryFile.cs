@@ -19,6 +19,8 @@ public sealed record RegistryFile
 
     public TerminalHostSettings TerminalHost { get; init; } = new();
 
+    public SettingsWindowLayout SettingsWindow { get; init; } = new();
+
     /// <summary>Rules applied to every terminal after its own rules. Sensible defaults ship in <see cref="StatusRule.Defaults"/>.</summary>
     public IReadOnlyList<StatusRule> GlobalStatusRules { get; init; } = StatusRule.Defaults;
 
@@ -120,6 +122,20 @@ public sealed record HotkeySettings
 
     /// <summary>Prefix for the always-on 1–9 jump keys; the digit is appended.</summary>
     public string JumpPrefix { get; init; } = "Ctrl+Alt";
+}
+
+/// <summary>
+/// Where the settings window was left: its size and the Terminals page's split between the
+/// list and the editor. Saved when the window hides (ADR-0018 amendment); DIPs throughout.
+/// </summary>
+public sealed record SettingsWindowLayout
+{
+    public int Width { get; init; } = 1240;
+
+    public int Height { get; init; } = 760;
+
+    /// <summary>Width of the terminal editor beside the list; wider than the old fixed 330.</summary>
+    public int EditorWidth { get; init; } = 440;
 }
 
 /// <summary>Switchboard's private Windows Terminal (ADR-0021).</summary>
