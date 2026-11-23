@@ -1,10 +1,21 @@
 # Project Progress
 
 ## Current Focus
-Rail menu button on branch `rail-menu-button` (ADR-0012 amendment 2026-11-22). The rail's
-foot (Unbound list and "+ New terminal") is replaced by one "…" button with a menu. On the
-top edge in Centered mode, strip segments now line up exactly with the rail cards. M5 is
-merged (PR #3); this work is PR #4. Menus now take focus while open so Esc and click-away close them.
+Appearance import on branch `wt-appearance-import` (ADR-0022, PRD R29): Settings → Terminals
+copies the installed WT's fonts, colors, opacity and schemes into the terminal host with one
+button. M5 (PR #3) and the rail menu button (PR #4) are merged.
+
+## Appearance import checks
+- [ ] Fresh host (WT's default look): Settings → Terminals shows the "uses Windows Terminal's default look" hint and the Import button
+- [ ] Import → the message says how many profiles were restyled; open Switchboard terminals change font/colors within a second, no restart
+- [ ] `%LOCALAPPDATA%\Switchboard\wt\settings\settings.json.switchboard.bak` exists and is the original file (comments intact); the hint is gone after import
+- [ ] Launch every Switchboard terminal after import → each still runs its own command and directory; tab colors are still Switchboard's
+- [ ] Change the installed WT's font, import again → the host follows (overwrite), and the `.bak` still holds the original, not the first import
+- [ ] Close and reopen Settings after the host WT first creates its settings.json → the import section appears without restarting Switchboard
+- [ ] Clear the host folder → the import section disappears
+
+### Superseded focus (rail menu)
+Rail menu button (ADR-0012 amendment 2026-11-22), merged as PR #4.
 
 ## Rail menu checks
 - [x] Top edge, Centered, Show closed terminals on, with 1, 5 and 9 terminals, at 100 % and 175 % scaling: each strip segment sits over its rail card (within 1 px), and no horizontal scrollbar appears
@@ -25,7 +36,7 @@ adopted or imported (ADR-0021). 163/163 tests. Spike passed (separate process, s
 
 ## M5 Checks
 - [ ] Spike leftover: Store WT on `"windowingBehavior": "useExisting"`, a Switchboard terminal open → `wt` from Start opens in a Store window, never as a tab in the Switchboard one
-- [ ] Copy your profiles (Ubuntu, PowerShell, …) into `%LOCALAPPDATA%\Switchboard\wt\settings\settings.json`
+- [x] Profiles in the terminal host: none to copy. The portable WT generates the same dynamic profiles (PowerShell, Ubuntu, Git Bash, …) on first run, and launches go by profile name. Only appearance differs (font, colors, opacity); importing it is the next item of work
 - [x] Settings → Terminals: set the host folder to `%LOCALAPPDATA%\Switchboard\wt` → no red error; type a bad path → error shows; clear it → error goes
 - [x] Strip click launches each terminal in the portable WT (`Get-Process WindowsTerminal | select Id,Path` shows the portable path); colors, status rules, thumbnails, attention pulse, hide-from-taskbar all still work
 - [x] Open a Store WT window and retitle it to a registered name (`$Host.UI.RawUI.WindowTitle = 'anvil'`), restart Switchboard → it is not bound, not colored, keeps its taskbar button

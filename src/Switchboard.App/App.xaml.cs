@@ -59,6 +59,7 @@ public partial class App : Application
         services.AddSingleton<SwitcherViewModel>();
         services.AddSingleton<Switcher.SwitcherWindow>();
         services.AddSingleton<WtProfileProvider>();
+        services.AddSingleton<WtAppearanceImporter>();
         services.AddSingleton<PickerViewModel>();
         services.AddSingleton<Picker.PickerWindow>();
         services.AddSingleton<SettingsApplyQueue>();

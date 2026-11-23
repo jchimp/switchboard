@@ -45,8 +45,12 @@ New-Item "$dst\.portable" -ItemType File -Force | Out-Null
 
 Then set **Settings → Terminals → Terminal host folder** to `%LOCALAPPDATA%\Switchboard\wt`
 (or `"terminalHost": { "folder": "..." }` in `switchboard.json`). The portable copy keeps its
-own profiles in `wt\settings\settings.json`; set up your profiles there. It does not
-auto-update: repeat the steps above to update it.
+own settings in `wt\settings\settings.json`. It generates the same profiles as your installed
+Windows Terminal (PowerShell, Ubuntu, …), so terminals work as they are. To give it the same
+look, press **Import appearance from installed Windows Terminal** on the same settings page: it
+copies fonts, colors, opacity and schemes, never command lines or profiles, and keeps the
+original file as `settings.json.switchboard.bak` (ADR-0022). The portable copy does not auto-update:
+repeat the steps above to update it.
 
 ## Build & run
 

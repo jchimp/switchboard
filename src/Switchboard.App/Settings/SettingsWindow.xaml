@@ -164,6 +164,19 @@
           <TextBlock Style="{StaticResource Hint}" Foreground="{StaticResource SettingsError}" Margin="0,-8,0,14"
                      Text="No wt.exe in this folder. Launches will fail until it is fixed or cleared."
                      Visibility="{Binding HostFolderMissing, Converter={StaticResource BoolToVis}}" />
+
+          <!-- Appearance import (ADR-0022): shown only when there is a host and an installed WT. -->
+          <StackPanel Margin="0,0,0,14" Visibility="{Binding CanImportAppearance, Converter={StaticResource BoolToVis}}">
+            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6"
+                       Text="The terminal host uses Windows Terminal's default look. Import your fonts, colors and opacity from the installed Windows Terminal."
+                       Visibility="{Binding HostLooksUnstyled, Converter={StaticResource BoolToVis}}" />
+            <Button Style="{StaticResource GhostButton}" HorizontalAlignment="Left"
+                    Content="Import appearance from installed Windows Terminal"
+                    ToolTip="Copies fonts, colors, opacity and themes into the terminal host. Overwrites the host's appearance; command lines and profiles are not touched. The old file is kept as settings.json.switchboard.bak."
+                    Command="{Binding ImportAppearanceCommand}" />
+            <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" Text="{Binding AppearanceResult}"
+                       MaxWidth="640" HorizontalAlignment="Left" />
+          </StackPanel>
         </StackPanel>
 
         <Grid Grid.Row="1">

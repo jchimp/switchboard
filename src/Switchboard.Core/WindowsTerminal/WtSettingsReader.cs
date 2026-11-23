@@ -25,7 +25,10 @@ public static class WtSettingsReader
         try
         {
             using var doc = JsonDocument.Parse(json, Options);
-            if (!doc.RootElement.TryGetProperty("profiles", out var profiles))
+
+            // TryGetProperty throws on a non-object root ("[]", "42"), which is valid JSON.
+            if (doc.RootElement.ValueKind != JsonValueKind.Object
+                || !doc.RootElement.TryGetProperty("profiles", out var profiles))
             {
                 return [];
             }

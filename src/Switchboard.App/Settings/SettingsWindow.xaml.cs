@@ -27,6 +27,15 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         SourceInitialized += (_, _) => DarkTitleBar.Apply(new WindowInteropHelper(this).Handle);
         vm.Terminals.ImportRequested += ShowImportDialog;
+
+        // Hidden, not closed, between uses: re-check the WT files each time it is shown.
+        IsVisibleChanged += (_, e) =>
+        {
+            if (e.NewValue is true)
+            {
+                vm.Terminals.RefreshAppearance();
+            }
+        };
     }
 
     private void ShowImportDialog()

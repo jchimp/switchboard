@@ -59,6 +59,8 @@ public class WtSettingsReaderTests
         Assert.Empty(WtSettingsReader.Parse(""));
         Assert.Empty(WtSettingsReader.Parse("""{ "profiles": 42 }"""));
         Assert.Empty(WtSettingsReader.Parse("""{ "noProfiles": [] }"""));
+        Assert.Empty(WtSettingsReader.Parse("[]"));
+        Assert.Empty(WtSettingsReader.Parse("42"));
     }
 
     [Fact]
