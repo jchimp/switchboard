@@ -31,17 +31,23 @@ Slide-out rail with live thumbnails and the overlay switcher are milestones 2–
 Download `Switchboard-<version>.zip` from Releases, unzip it, and in the unzipped folder run:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -WithTerminalHost
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
 It installs for your user only (no admin) to `%LOCALAPPDATA%\Programs\Switchboard`, adds a
 Start Menu shortcut, and adds Switchboard to Settings > Apps so you can uninstall it there.
+It also installs the private terminal host (below): a pinned portable Windows Terminal in
+`%LOCALAPPDATA%\Switchboard\wt`, checked against its SHA-256.
+
 Run it again with a newer zip to upgrade: it stops a running Switchboard, replaces the files
-and starts it again.
+and starts it again. If the zip pins a newer Windows Terminal, it updates the host too and
+keeps the host's `settings` folder (profiles and appearance). It does not update the host while
+Switchboard's terminals are open, because that would close them; it says so, and you run it
+again after you close them. If the download fails, Switchboard still installs.
 
 | Switch | Does |
 |---|---|
-| `-WithTerminalHost` | Downloads a pinned portable Windows Terminal to `%LOCALAPPDATA%\Switchboard\wt`, checks its SHA-256 and marks it portable. Skipped if that folder already has `wt.exe` |
+| `-NoTerminalHost` | Does not install or update the terminal host. Switchboard then uses the installed Windows Terminal |
 | `-StartAtLogin` | Starts Switchboard when you sign in |
 | `-InstallDir <path>` | Installs somewhere else |
 | `-DryRun` | Prints what it would do and changes nothing |
@@ -66,7 +72,7 @@ Copy-Item "$env:TEMP\wtx\*\*" $dst -Recurse -Force
 New-Item "$dst\.portable" -ItemType File -Force | Out-Null
 ```
 
-`install.ps1 -WithTerminalHost` does the steps above for you. With **Settings → General →
+`install.ps1` does the steps above for you, for a pinned version. With **Settings → General →
 Terminal host folder** left empty, Switchboard uses `%LOCALAPPDATA%\Switchboard\wt` whenever it
 has `wt.exe`, so there is nothing to set. To keep the copy somewhere else, put that folder in
 the setting (or `"terminalHost": { "folder": "..." }` in `switchboard.json`). To go back to the

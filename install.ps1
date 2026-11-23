@@ -10,13 +10,16 @@
 
     Copies the release to %LOCALAPPDATA%\Programs\Switchboard, adds a Start
     Menu shortcut, and registers an uninstall entry in Settings > Apps for the
-    current user only (HKCU). Running it again upgrades in place.
+    current user only (HKCU). It also installs or updates the terminal host: a
+    pinned portable Windows Terminal in %LOCALAPPDATA%\Switchboard\wt
+    (ADR-0021). Running it again upgrades both in place.
 
     It never touches %APPDATA%\Switchboard\switchboard.json (your terminals) or
-    an existing %LOCALAPPDATA%\Switchboard\wt (the terminal host).
+    the terminal host's settings folder (its profiles and appearance).
 
-    See docs/adr/0023-per-user-install-script.md for the reasons behind each
-    choice.
+    See docs/adr/0023-per-user-install-script.md and
+    docs/adr/0024-install-script-keeps-the-terminal-host-current.md for the
+    reasons behind each choice.
 
 .PARAMETER InstallDir
     Where Switchboard is installed. The folder must be empty, missing, or an
@@ -27,10 +30,9 @@
     Without this switch an existing Startup shortcut is left as it is, so an
     upgrade keeps the earlier choice. uninstall.ps1 removes it.
 
-.PARAMETER WithTerminalHost
-    Also download the pinned portable Windows Terminal into
-    %LOCALAPPDATA%\Switchboard\wt (ADR-0021), check its SHA-256, and mark it
-    portable. Skipped if that folder already has wt.exe.
+.PARAMETER NoTerminalHost
+    Do not install or update the terminal host. Without a host, Switchboard
+    uses the installed Windows Terminal and can bind any of its windows.
 
 .PARAMETER DryRun
     Print what would happen and change nothing.
@@ -39,7 +41,7 @@
 param(
     [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Programs\Switchboard'),
     [switch]$StartAtLogin,
-    [switch]$WithTerminalHost,
+    [switch]$NoTerminalHost,
     [switch]$DryRun
 )
 
@@ -66,6 +68,12 @@ $AppName = 'Switchboard'
 $ExeName = 'Switchboard.exe'
 $UninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Switchboard'
 $TerminalHostDir = Join-Path $env:LOCALAPPDATA 'Switchboard\wt'
+# Written by this script after a host install. The only record of which WT
+# version is in the folder.
+$WtMarkerName = '.switchboard-wt-version'
+# What the host keeps across updates: WT's portable settings (profiles, the
+# imported appearance and its .bak, window state).
+$WtSettingsName = 'settings'
 
 function Write-Step { param([string]$Message) Write-Host "==> $Message" -ForegroundColor Cyan }
 function Write-Note { param([string]$Message) Write-Host "    $Message" -ForegroundColor DarkGray }
@@ -108,17 +116,124 @@ function Get-RunningInstances {
         })
 }
 
+function Get-LongPath {
+    # Expands 8.3 short names (JOHNSM~1) segment by segment. Each existing
+    # segment is replaced by its name on disk; the rest is kept as given.
+    param([string]$Path)
+    $full = Get-FullPath $Path
+    $root = [System.IO.Path]::GetPathRoot($full)
+    $current = $root
+    foreach ($segment in ($full.Substring($root.Length) -split '\\' | Where-Object { $_ })) {
+        $match = $null
+        if (Test-Path -LiteralPath $current -PathType Container) {
+            $match = Get-ChildItem -LiteralPath $current -Force -Filter $segment -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+        }
+        if ($match) { $segment = $match.Name }
+        $current = Join-Path $current $segment
+    }
+    return $current.TrimEnd('\')
+}
+
+function Get-InstalledWtVersion {
+    # A host without the marker predates it or was set up by hand. Its version
+    # is unknown, so it is refreshed once.
+    $marker = Join-Path $TerminalHostDir $WtMarkerName
+    if (-not (Test-Path -LiteralPath $marker)) { return $null }
+    return ([string](Get-Content -LiteralPath $marker -Raw)).Trim()
+}
+
+function Get-HostProcesses {
+    # A running host locks its files, and stopping it would kill the shells in
+    # its windows. So the script finds these and leaves the host alone.
+    # Long paths on both sides: a process reports its long path, but
+    # %LOCALAPPDATA% may hold an 8.3 short name (JOHNSM~1).
+    $prefix = "$(Get-LongPath $TerminalHostDir)\"
+    $names = 'WindowsTerminal', 'OpenConsole', 'wt', 'elevate-shim'
+    return @(Get-Process -Name $names -ErrorAction SilentlyContinue | Where-Object {
+            $_.Path -and (Get-LongPath $_.Path).StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)
+        })
+}
+
+function Install-HostFiles {
+    # Swap in the new binaries and carry the settings folder over. The old host
+    # is renamed aside first and put back if anything fails, so a failure never
+    # leaves a half-replaced host.
+    param([string]$NewFiles)
+
+    $hostName = Split-Path -Leaf $TerminalHostDir
+    $old = $null
+    if (Test-Path -LiteralPath $TerminalHostDir) {
+        $old = "$TerminalHostDir.old-$([guid]::NewGuid().ToString('N').Substring(0, 8))"
+        # Windows allows this rename even while an exe in the folder runs, so
+        # Get-HostProcesses is the only guard against a running host.
+        Rename-Item -LiteralPath $TerminalHostDir -NewName (Split-Path -Leaf $old)
+    }
+    try {
+        New-Item -ItemType Directory -Path $TerminalHostDir | Out-Null
+        Copy-Item -Path (Join-Path $NewFiles '*') -Destination $TerminalHostDir -Recurse -Force
+        if ($old) {
+            $oldSettings = Join-Path $old $WtSettingsName
+            if (Test-Path -LiteralPath $oldSettings) {
+                Copy-Item -LiteralPath $oldSettings -Destination $TerminalHostDir -Recurse -Force
+                Write-Note "kept $WtSettingsName\ (profiles and appearance)"
+            }
+        }
+        # Without this marker WT shares the installed WT's settings (ADR-0021).
+        New-Item -ItemType File -Path (Join-Path $TerminalHostDir '.portable') -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $TerminalHostDir $WtMarkerName) -Value $WtVersion -Encoding ASCII
+    }
+    catch {
+        $failure = $_
+        Remove-Item -LiteralPath $TerminalHostDir -Recurse -Force -ErrorAction SilentlyContinue
+        if ($old) {
+            try {
+                Rename-Item -LiteralPath $old -NewName $hostName
+            }
+            catch {
+                throw "$($failure.Exception.Message) The previous host could not be put back; it is in $old. Rename it to $hostName."
+            }
+        }
+        throw $failure
+    }
+
+    if ($old) {
+        Remove-Item -LiteralPath $old -Recurse -Force -ErrorAction SilentlyContinue
+        if (Test-Path -LiteralPath $old) {
+            Write-Warn "Could not remove the previous host in $old. Delete it by hand."
+        }
+    }
+}
+
 function Install-TerminalHost {
-    $wtExe = Join-Path $TerminalHostDir 'wt.exe'
-    if (Test-Path -LiteralPath $wtExe) {
-        Write-Note "$TerminalHostDir already has wt.exe, so it is left as it is."
-        Write-Note 'To replace it, quit Switchboard and its terminals, delete that folder, and run again.'
+    $hasHost = Test-Path -LiteralPath (Join-Path $TerminalHostDir 'wt.exe')
+    $installed = Get-InstalledWtVersion
+    if ($hasHost -and $installed -eq $WtVersion) {
+        Write-Note "$TerminalHostDir already has Windows Terminal $WtVersion."
         return
     }
+
+    $from = 'an unknown version'
+    if ($installed) { $from = $installed }
+    if ($hasHost) {
+        $busy = @(Get-HostProcesses)
+        if ($busy.Count -gt 0) {
+            Write-Warn "Switchboard's terminals are open, so the host stays at $from."
+            Write-Warn "Close them and run install.ps1 again to update it to $WtVersion."
+            return
+        }
+        Write-Note "updating the host from $from to $WtVersion"
+    }
+
     if ($DryRun) {
         Write-Note "would download $WtUrl"
         Write-Note "would check its SHA-256 is $WtSha256"
-        Write-Note "would extract it to $TerminalHostDir and add a .portable marker"
+        if ($hasHost) {
+            Write-Note "would replace the files in $TerminalHostDir and keep its $WtSettingsName\ folder"
+        }
+        else {
+            Write-Note "would extract it to $TerminalHostDir and add a .portable marker"
+        }
         return
     }
 
@@ -141,7 +256,7 @@ function Install-TerminalHost {
 
         $actual = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
         if ($actual -ne $WtSha256) {
-            throw "The Windows Terminal download has SHA-256 $actual, expected $WtSha256. Nothing was installed."
+            throw "The Windows Terminal download has SHA-256 $actual, expected $WtSha256."
         }
         Write-Note 'SHA-256 matches'
 
@@ -150,14 +265,11 @@ function Install-TerminalHost {
         # The zip holds one top folder (terminal-<version>); its contents are the host.
         $top = @(Get-ChildItem -LiteralPath $extract -Directory)
         if ($top.Count -ne 1 -or -not (Test-Path -LiteralPath (Join-Path $top[0].FullName 'wt.exe'))) {
-            throw "The Windows Terminal zip does not have the expected layout (one folder holding wt.exe). Nothing was installed."
+            throw 'The Windows Terminal zip does not have the expected layout (one folder holding wt.exe).'
         }
 
-        New-Item -ItemType Directory -Path $TerminalHostDir -Force | Out-Null
-        Copy-Item -Path (Join-Path $top[0].FullName '*') -Destination $TerminalHostDir -Recurse -Force
-        # Without this marker WT shares the installed WT's settings (ADR-0021).
-        New-Item -ItemType File -Path (Join-Path $TerminalHostDir '.portable') -Force | Out-Null
-        Write-Note "installed to $TerminalHostDir"
+        Install-HostFiles -NewFiles $top[0].FullName
+        Write-Note "installed Windows Terminal $WtVersion to $TerminalHostDir"
     }
     finally {
         Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue
@@ -274,9 +386,24 @@ Invoke-Change "write $UninstallKey" {
 
 # --- terminal host ---------------------------------------------------------
 
-if ($WithTerminalHost) {
+$hostReady = Test-Path -LiteralPath (Join-Path $TerminalHostDir 'wt.exe')
+if (-not $NoTerminalHost) {
     Write-Step "Terminal host (portable Windows Terminal $WtVersion)"
-    Install-TerminalHost
+    try {
+        Install-TerminalHost
+    }
+    catch {
+        # The app works without a host, so a failed download (offline, GitHub
+        # down, a bad hash) must not fail the whole install.
+        Write-Warn "The terminal host was not installed or updated: $($_.Exception.Message)"
+        if ($hostReady) {
+            Write-Warn "The existing host in $TerminalHostDir is kept. Run install.ps1 again to retry."
+        }
+        else {
+            Write-Warn 'Run install.ps1 again to retry. Until then Switchboard uses the installed Windows Terminal.'
+        }
+    }
+    $hostReady = Test-Path -LiteralPath (Join-Path $TerminalHostDir 'wt.exe')
 }
 
 # --- restart ---------------------------------------------------------------
@@ -294,9 +421,14 @@ if ($DryRun) {
 else {
     Write-Note "$AppName $version is installed. Start it from the Start Menu."
 }
-if ($WithTerminalHost) {
+if ($hostReady) {
     # The registry is the app's to write (CLAUDE.md invariant 3). The app uses
     # this folder by itself when terminalHost.folder is unset (ADR-0023).
     Write-Note "Switchboard uses $TerminalHostDir as its terminal host unless Settings > General names another folder."
+}
+elseif ($NoTerminalHost) {
+    # A failed install already warned in its catch block above.
+    Write-Warn "No terminal host in $TerminalHostDir. Switchboard uses the installed Windows Terminal and can bind any of its windows."
+    Write-Warn 'Run install.ps1 without -NoTerminalHost to add the host.'
 }
 Write-Note 'To uninstall: Settings > Apps > Switchboard, or run uninstall.ps1 in the install folder.'

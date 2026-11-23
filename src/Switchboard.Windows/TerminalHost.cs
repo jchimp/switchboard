@@ -28,7 +28,7 @@ public sealed class TerminalHost
     }
 
     /// <summary>
-    /// Where <c>install.ps1 -WithTerminalHost</c> puts the portable WT, used when the registry
+    /// Where <c>install.ps1</c> puts the portable WT, used when the registry
     /// names no folder and this one has <c>wt.exe</c> (ADR-0023).
     /// </summary>
     public static string DefaultFolder { get; } = Path.Combine(
