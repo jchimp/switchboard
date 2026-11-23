@@ -7,14 +7,16 @@ using Switchboard.Core.Status;
 
 namespace Switchboard.App.ViewModels;
 
-public sealed partial class StripViewModel : ObservableObject
+public sealed partial class StripViewModel : ObservableObject, ISwitchboardMenuCommands
 {
     private readonly TerminalSession _session;
+    private readonly QuickLaunchService _quick;
     private readonly SettingsLauncher _settings;
 
-    public StripViewModel(TerminalSession session, SettingsLauncher settings)
+    public StripViewModel(TerminalSession session, QuickLaunchService quick, SettingsLauncher settings)
     {
         _session = session;
+        _quick = quick;
         _settings = settings;
         _session.StateChanged += OnStateChanged;
         _session.RegistryChanged += Rebuild;
@@ -37,6 +39,9 @@ public sealed partial class StripViewModel : ObservableObject
 
     [RelayCommand]
     private Task Activate(TerminalItemViewModel item) => _session.ActivateAsync(item.Name, toggleMinimize: true);
+
+    [RelayCommand]
+    private Task NewTerminal() => _quick.CreateAndLaunchAsync();
 
     [RelayCommand]
     private void OpenSettings() => _settings.Open();

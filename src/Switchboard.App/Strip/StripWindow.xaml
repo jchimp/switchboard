@@ -6,19 +6,10 @@
         WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
         Background="Transparent" ShowInTaskbar="False" Topmost="True"
         ShowActivated="False" Focusable="False">
-  <Border Background="{StaticResource StripBackground}">
-    <!-- The menu popup is its own HWND and takes focus only while open, at the user's
-         explicit request; focus returns on close. The strip itself never activates (ADR-0006). -->
-    <Border.ContextMenu>
-      <ContextMenu>
-        <MenuItem Header="Settings…" Command="{Binding OpenSettingsCommand}" />
-        <Separator />
-        <MenuItem Header="Reapply colors" Command="{Binding ReapplyColorsCommand}" />
-        <MenuItem Header="Reload registry" Command="{Binding ReloadRegistryCommand}" />
-        <Separator />
-        <MenuItem Header="Quit Switchboard" Command="{Binding QuitCommand}" />
-      </ContextMenu>
-    </Border.ContextMenu>
+  <!-- The menu (SwitchboardMenu, set in code) is its own HWND and takes focus only while
+       open, at the user's explicit request; focus returns on close. The strip itself never
+       activates (ADR-0006). -->
+  <Border Background="{StaticResource StripBackground}" x:Name="StripFrame">
     <ItemsControl ItemsSource="{Binding Items}" x:Name="Segments">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>

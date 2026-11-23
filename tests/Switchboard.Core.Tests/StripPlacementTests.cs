@@ -80,6 +80,14 @@ public class StripPlacementTests
     }
 
     [Fact]
+    public void Top_edge_content_length_rounds_up_to_match_the_rail()
+    {
+        var rect = StripPlacement.Compute(
+            Monitor(0, 0, 3840, 2160, scale: 1.75), ScreenEdge.Top, thicknessDips: 8, contentLengthDips: 1126);
+        Assert.Equal(1971, rect.Width);
+    }
+
+    [Fact]
     public void Collapsed_sliver_keeps_the_centered_content_width()
     {
         // Only thickness animates on collapse; the bar must not jump sideways.

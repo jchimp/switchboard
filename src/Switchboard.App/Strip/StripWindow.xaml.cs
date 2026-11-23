@@ -49,6 +49,7 @@ public partial class StripWindow : Window
 
         InitializeComponent();
         DataContext = vm;
+        SwitchboardMenu.AttachTo(StripFrame, SwitchboardMenu.Build(vm));
         SourceInitialized += OnSourceInitialized;
         Loaded += (_, _) =>
         {
@@ -316,6 +317,7 @@ public partial class StripWindow : Window
             var granted = _appBar.Apply(
                 hwnd, s.Edge, StripPlacement.ComputeAppBar(monitor, s.Edge, s.Thickness));
             _slide.Stop();
+            Segments.Margin = default;
             Apply(hwnd, granted ?? StripPlacement.Compute(monitor, s.Edge, s.Thickness));
             return;
         }
@@ -331,6 +333,13 @@ public partial class StripWindow : Window
         int? length = _vm.IsVertical || s.TopWidth == TopWidthMode.Full
             ? null
             : RailMetrics.ContentLengthDips(_session.Registry.Terminals.Count);
+
+        // Same width as the rail, but the rail's cards don't fill it: padding and border on
+        // both ends, the "…" slot on the right. Inset the segment row by the same amounts so
+        // each segment sits over its card.
+        Segments.Margin = length is null
+            ? default
+            : new Thickness(RailMetrics.LeadingInsetDips, 0, RailMetrics.TrailingInsetDips, 0);
         var rect = StripPlacement.Compute(monitor, s.Edge, thickness, length);
 
         if (animate && _currentRect is { } from && from != rect)

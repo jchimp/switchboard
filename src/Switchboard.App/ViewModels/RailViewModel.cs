@@ -13,7 +13,7 @@ namespace Switchboard.App.ViewModels;
 /// and keyed by name: Slice 3 hangs a DWM thumbnail registration off each row, and a
 /// Clear() on every state change would churn them all (ADR-0012).
 /// </summary>
-public sealed partial class RailViewModel : ObservableObject
+public sealed partial class RailViewModel : ObservableObject, ISwitchboardMenuCommands
 {
     private readonly TerminalSession _session;
     private readonly QuickLaunchService _quick;
@@ -31,14 +31,6 @@ public sealed partial class RailViewModel : ObservableObject
     }
 
     public ObservableCollection<RailItemViewModel> Items { get; } = [];
-
-    /// <summary>
-    /// Windows Terminal windows on the desktop not bound to any registered name. Refreshed
-    /// only when the rail opens (or the user asks) — never on a timer (R7).
-    /// </summary>
-    public ObservableCollection<UnboundWindow> UnboundItems { get; } = [];
-
-    public bool HasUnbound => UnboundItems.Count > 0;
 
     public StripSettings Settings => _session.Registry.Strip;
 
@@ -66,31 +58,16 @@ public sealed partial class RailViewModel : ObservableObject
     [RelayCommand]
     private void Quit() => System.Windows.Application.Current.Shutdown();
 
-    /// <summary>Re-enumerates unbound windows. Call on rail-open, and from the manual Refresh affordance.</summary>
-    public void RefreshUnbound()
-    {
-        UnboundItems.Clear();
-        foreach (var w in _session.UnboundWindows())
-        {
-            UnboundItems.Add(w);
-        }
-
-        OnPropertyChanged(nameof(HasUnbound));
-    }
+    /// <summary>
+    /// The terminal host's windows not bound to any registered name. An EnumWindows scan:
+    /// call only when the rail's "…" menu opens, never on a timer (R7).
+    /// </summary>
+    public IReadOnlyList<UnboundWindow> UnboundWindows() => _session.UnboundWindows();
 
     /// <summary>Registered terminals with no live window — the offer list for "adopt as…" (R7).</summary>
     public IReadOnlyList<TerminalDefinition> AdoptableTerminals() => _session.AdoptableTerminals();
 
-    public bool Adopt(nint hwnd, string name)
-    {
-        var ok = _session.AdoptAsync(name, hwnd);
-        if (ok)
-        {
-            RefreshUnbound();
-        }
-
-        return ok;
-    }
+    public bool Adopt(nint hwnd, string name) => _session.AdoptAsync(name, hwnd);
 
     /// <summary>Name/color defaults for the adopt-as-new popup (next free name, next unused hue).</summary>
     public TerminalDefinition AdoptSeed() => _quick.BuildDefinition(persistent: true);
@@ -111,10 +88,9 @@ public sealed partial class RailViewModel : ObservableObject
 
         if (!await _session.AdoptAsNewAsync(def, hwnd))
         {
-            return "That window is gone; refresh the list.";
+            return "That window is gone.";
         }
 
-        RefreshUnbound();
         return null;
     }
 

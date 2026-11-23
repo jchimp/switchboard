@@ -17,67 +17,34 @@
     <SolidColorBrush x:Key="RailBadgeBorder" Color="#FF384056" />
     <SolidColorBrush x:Key="RailHover" Color="#0DFFFFFF" />
   </Window.Resources>
-  <Border Background="{StaticResource RailBackground}"
+  <Border x:Name="RailFrame" Background="{StaticResource RailBackground}"
           BorderBrush="{StaticResource RailBorder}" BorderThickness="1">
-    <!-- Same escape hatch as the strip's menu (ADR-0006/0012): the popup is its own HWND
-         and takes focus only while open, at the user's explicit request. -->
-    <Border.ContextMenu>
-      <ContextMenu Opened="RailMenu_Opened" Closed="RailMenu_Closed">
-        <MenuItem Header="Settings…" Command="{Binding OpenSettingsCommand}" />
-        <Separator />
-        <MenuItem Header="Reapply colors" Command="{Binding ReapplyColorsCommand}" />
-        <MenuItem Header="Reload registry" Command="{Binding ReloadRegistryCommand}" />
-        <Separator />
-        <MenuItem Header="Quit Switchboard" Command="{Binding QuitCommand}" />
-      </ContextMenu>
-    </Border.ContextMenu>
+    <!-- Right-click menu is built in code (SwitchboardMenu) so it can't drift from the
+         strip's or the "…" button's. -->
     <DockPanel>
-      <!-- Docked Bottom for vertical edges; OpenRail flips it to a Right column for the
-           top edge, where the rail has no height to spare (Concept A's foot). -->
-      <StackPanel DockPanel.Dock="Bottom" x:Name="FootSection">
-        <!-- Unbound: Windows Terminal windows on the desktop not tied to a registered name
-             (R7). Populated only on rail-open or Refresh — never on a timer. -->
-        <Border BorderBrush="{StaticResource RailBorder}" BorderThickness="0,1,0,0"
-                Visibility="{Binding HasUnbound, Converter={StaticResource BoolToVis}}">
-          <StackPanel Margin="12,8,12,4">
-            <DockPanel>
-              <TextBlock Text="Unbound" FontSize="11" FontWeight="SemiBold"
-                         Foreground="{StaticResource RailMuted}" />
-              <TextBlock Text="refresh" FontSize="11" HorizontalAlignment="Right"
-                         Foreground="{StaticResource RailSub}" Cursor="Hand"
-                         MouseLeftButtonUp="Refresh_Click" />
-            </DockPanel>
-            <!-- Its own scrollbar: many unbound windows must never crowd out the card list. -->
-            <ScrollViewer MaxHeight="84" VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled" Margin="0,4,0,0">
-              <ItemsControl ItemsSource="{Binding UnboundItems}" x:Name="UnboundRows">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <DockPanel Margin="0,2">
-                      <Border DockPanel.Dock="Right" BorderBrush="{StaticResource RailBadgeBorder}"
-                              BorderThickness="1" CornerRadius="4" Padding="6,2" Cursor="Hand"
-                              MouseLeftButtonUp="AdoptButton_Click">
-                        <TextBlock Text="Adopt as…" FontSize="11" Foreground="#FFDFE3EA" />
-                      </Border>
-                      <TextBlock Text="{Binding Title}" FontSize="11" Foreground="{StaticResource RailSub}"
-                                 FontFamily="Cascadia Mono,Consolas" TextTrimming="CharacterEllipsis"
-                                 Margin="0,0,8,0" VerticalAlignment="Center" />
-                    </DockPanel>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </ScrollViewer>
-          </StackPanel>
+      <!-- The "…" button's slot. Its own column on the top edge (RailMetrics.MenuSlotDips),
+           a row at the bottom on side edges (ApplyOrientation). Never over a card: the
+           cards' DWM thumbnails composite above the rail's own visuals and would cover it. -->
+      <Border DockPanel.Dock="Right" x:Name="MenuSlot">
+        <Border x:Name="MoreButton" Width="28" Height="28" CornerRadius="4"
+                HorizontalAlignment="Right" VerticalAlignment="Center"
+                Cursor="Hand" ToolTip="More" MouseLeftButtonDown="MoreButton_Pressed"
+                MouseLeftButtonUp="MoreButton_Click" MouseLeave="MoreButton_Left">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Setter Property="Background" Value="Transparent" />
+              <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                  <Setter Property="Background" Value="{StaticResource RailHover}" />
+                </Trigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+          <TextBlock Text="&#xE712;" FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                     FontSize="14" Foreground="{StaticResource RailMuted}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Border>
-        <Border BorderBrush="{StaticResource RailBorder}" BorderThickness="0,1,0,0">
-          <Border Margin="12,8" HorizontalAlignment="Left"
-                  BorderBrush="{StaticResource RailBadgeBorder}" BorderThickness="1"
-                  CornerRadius="4" Padding="8,3" Cursor="Hand"
-                  MouseLeftButtonUp="NewTerminal_Click">
-            <TextBlock Text="+ New terminal" Foreground="#FFDFE3EA" FontSize="11" />
-          </Border>
-        </Border>
-      </StackPanel>
+      </Border>
       <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                     x:Name="ListScroller" Padding="8,8,8,8" ScrollChanged="ListScroller_ScrollChanged">
         <ItemsControl ItemsSource="{Binding Items}" x:Name="Rows">
