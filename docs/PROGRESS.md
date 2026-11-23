@@ -6,13 +6,23 @@ the release zip. Dry runs pass on Windows PowerShell 5.1 and PowerShell 7, and t
 download, hash and zip layout were checked. A real install passed from both PowerShell
 versions; upgrade, start at login, the terminal host download and uninstall are still open.
 
+ADR-0024 (branch `terminal-host-default`): the host is installed by default and updated in
+place on every run; `-NoTerminalHost` opts out. Fresh install, same version, older version
+(keeps `settings\`, drops stale files), no marker, and host-running were run against a scratch
+folder with the real WT zip; dry runs with and without `-NoTerminalHost` pass.
+
 ## Installer checks
 - [x] `.\scripts\release.ps1 -Apply` → the zip has `install.ps1` and `uninstall.ps1` at its root
 - [x] Unzip in Explorer, run `install.ps1` from Windows PowerShell → Start Menu has Switchboard, it starts with no SmartScreen prompt, Settings > Apps lists Switchboard 0.x with its icon
 - [x] Same from a PowerShell 7 window (`powershell -File ...`) → no `Get-FileHash` error
 - [ ] With Switchboard running and terminals open, install a newer zip → it stops, upgrades, starts again, and the terminals rebind
 - [ ] `-StartAtLogin` → Startup shortcut exists; reinstall without it → shortcut is kept
-- [ ] `-WithTerminalHost` on a machine with no host → `%LOCALAPPDATA%\Switchboard\wt` has `wt.exe` and `.portable`; with the Settings > General folder empty, a launch runs from it (`Get-Process WindowsTerminal | select Path`) and the log says "(default, no folder set)"
+- [ ] `install.ps1` (no switches) on a machine with no host → `%LOCALAPPDATA%\Switchboard\wt` has `wt.exe`, `.portable` and `.switchboard-wt-version`; with the Settings > General folder empty, a launch runs from it (`Get-Process WindowsTerminal | select Path`) and the log says "(default, no folder set)"
+- [ ] Run it again → "already has Windows Terminal <version>", no download
+- [ ] Host installed by the old script (no `.switchboard-wt-version`), appearance imported → run with Switchboard's terminals closed → host updated, `wt\settings\settings.json` and its `.switchboard.bak` unchanged, no `wt.old-*` left
+- [ ] Same with a Switchboard terminal open → warns that the terminals are open, host unchanged, the terminal keeps running; Switchboard itself still upgrades
+- [ ] Offline (disable the network) on a machine with no host → warns, Switchboard still installs and starts
+- [ ] `-NoTerminalHost` with no host → installs the app, warns that there is no terminal host
 - [ ] Folder empty and no `%LOCALAPPDATA%\Switchboard\wt` (rename it) → launches use the installed WT as before
 - [x] Type a bad folder in Settings > General while the default exists → the red "No wt.exe" error shows; it does not fall back to the default
 - [ ] Uninstall from Settings > Apps → install folder, both shortcuts and the Apps entry are gone; `%APPDATA%\Switchboard` and `wt` are still there

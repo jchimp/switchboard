@@ -1,6 +1,6 @@
 # ADR-0023: A per-user install script ships in the release zip
 
-**Status:** Accepted · 2026-11-22 · Amends PRD non-functional "No installer required for v0", PRD R28, ADR-0021 "No installer" and its unset-folder default
+**Status:** Accepted · 2026-11-22 · Amended by ADR-0024 (terminal host on by default) · Amends PRD non-functional "No installer required for v0", PRD R28, ADR-0021 "No installer" and its unset-folder default
 
 ## Context
 A release is a zip of a single-file, self-contained `Switchboard.exe` plus a few native DLLs.

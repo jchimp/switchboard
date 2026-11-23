@@ -10,9 +10,11 @@ that section into the release section and its text becomes the GitHub release no
 
 - **Installer.** The release zip now has `install.ps1`. Run it from the unzipped folder to
   install Switchboard for your user only (no admin) with a Start Menu shortcut and an entry in
-  Settings > Apps to uninstall it. Running it again upgrades in place. `-StartAtLogin` starts
-  Switchboard when you sign in, and `-WithTerminalHost` downloads and sets up the private
-  Windows Terminal copy for you. Your terminals and settings are never touched.
+  Settings > Apps to uninstall it. It also sets up the private Windows Terminal copy for you.
+  Running it again upgrades both in place; the private copy keeps its profiles and look, and
+  is left alone while its terminals are open. `-StartAtLogin` starts Switchboard when you sign
+  in, and `-NoTerminalHost` skips the private copy. Your terminals and settings are never
+  touched.
 
 ### Changed
 

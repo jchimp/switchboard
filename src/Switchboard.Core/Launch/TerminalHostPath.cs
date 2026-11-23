@@ -26,7 +26,7 @@ public static class TerminalHostPath
     /// The host folder to use (ADR-0023). A folder the user set always wins, even one with no
     /// <c>wt.exe</c>, so a typo shows as an error instead of silently falling back. With none
     /// set, <paramref name="defaultFolder"/> is used if it holds <c>wt.exe</c> — where
-    /// <c>install.ps1 -WithTerminalHost</c> puts it — else null for <c>wt.exe</c> on PATH.
+    /// <c>install.ps1</c> puts it — else null for <c>wt.exe</c> on PATH.
     /// </summary>
     public static string? Effective(string? configured, string? defaultFolder, Func<string, bool> fileExists)
     {
