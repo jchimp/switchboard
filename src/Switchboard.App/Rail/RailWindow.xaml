@@ -69,7 +69,9 @@
                        composites the live thumbnail above the rail's own visuals. -->
                   <Border x:Name="ThumbSlot" Height="115" CornerRadius="3"
                           Background="#FF101010" />
-                  <Grid Margin="0,5,0,0">
+                  <!-- 4, not 5: the 14-pt name left 0.6 DIP of room in the fixed 190-DIP top rail,
+                       and a card that overflows it loses its live thumbnail. -->
+                  <Grid Margin="0,4,0,0">
                     <Grid.ColumnDefinitions>
                       <ColumnDefinition Width="*" />
                       <ColumnDefinition Width="Auto" />
@@ -78,11 +80,18 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                       <Ellipse Width="8" Height="8" Fill="{Binding Brush}" Margin="0,0,6,0"
                                VerticalAlignment="Center" />
-                      <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold"
+                      <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
                                  Foreground="{StaticResource RailText}"
                                  TextTrimming="CharacterEllipsis" />
                     </StackPanel>
-                    <Border Grid.Column="1" VerticalAlignment="Center"
+                    <!-- Rename/recolor affordance; revealed on row hover (ADR-0014). Hidden, not
+                         Collapsed, so the number badge never shifts when it appears. -->
+                    <TextBlock x:Name="EditPencil" Grid.Column="1" Text="✎" FontSize="12"
+                               Foreground="{StaticResource RailMuted}" Cursor="Hand"
+                               Margin="6,0,6,0" VerticalAlignment="Center" Visibility="Hidden"
+                               MouseLeftButtonUp="Rename_Click" />
+                    <!-- The jump number sits at the card's right edge, in line with the strip. -->
+                    <Border Grid.Column="2" VerticalAlignment="Center"
                             BorderBrush="{StaticResource RailBadgeBorder}" BorderThickness="1"
                             CornerRadius="4" Padding="5,1"
                             Visibility="{Binding HasJumpKey, Converter={StaticResource BoolToVis}}">
@@ -90,11 +99,6 @@
                                  FontFamily="Cascadia Mono,Consolas"
                                  Foreground="{StaticResource RailSub}" />
                     </Border>
-                    <!-- Rename/recolor affordance; revealed on row hover (ADR-0014). -->
-                    <TextBlock x:Name="EditPencil" Grid.Column="2" Text="✎" FontSize="12"
-                               Foreground="{StaticResource RailMuted}" Cursor="Hand"
-                               Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Hidden"
-                               MouseLeftButtonUp="Rename_Click" />
                   </Grid>
                   <StackPanel Orientation="Horizontal" Margin="14,0,0,0">
                     <TextBlock Text="{Binding SubLine}" FontSize="11" FontFamily="Cascadia Mono,Consolas"

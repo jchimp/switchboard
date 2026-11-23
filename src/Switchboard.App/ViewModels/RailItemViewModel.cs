@@ -5,7 +5,7 @@ using Switchboard.Core.Status;
 
 namespace Switchboard.App.ViewModels;
 
-/// <summary>One rail row: name, shell · distro · cwd sub-line, jump-key badge, state.</summary>
+/// <summary>One rail row: name, distro · cwd sub-line, jump-key badge, state.</summary>
 public sealed partial class RailItemViewModel : ObservableObject
 {
     public RailItemViewModel(TerminalDefinition definition, int position)
@@ -47,16 +47,10 @@ public sealed partial class RailItemViewModel : ObservableObject
 
     public double RowOpacity => IsClosed ? 0.45 : 1.0;
 
+    // No shell name: it said "pwsh" on almost every card and told the user nothing the
+    // terminal's own name didn't. Distro and folder are what tell two terminals apart.
     private IEnumerable<string> Parts()
     {
-        yield return Definition.Shell switch
-        {
-            ShellKind.WindowsPowerShell => "powershell",
-            ShellKind.Cmd => "cmd",
-            ShellKind.Wsl => "wsl",
-            _ => "pwsh",
-        };
-
         if (Definition.Distro is { Length: > 0 } distro)
         {
             yield return distro;
