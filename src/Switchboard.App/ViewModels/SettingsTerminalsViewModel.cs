@@ -17,64 +17,27 @@ namespace Switchboard.App.ViewModels;
 public sealed partial class SettingsTerminalsViewModel : ObservableObject
 {
     private readonly TerminalSession _session;
-    private readonly SettingsApplyQueue _queue;
-    private readonly WtAppearanceImporter _appearance;
     private readonly WtProfileProvider _profileProvider;
     private WtProfileCatalog _profiles;
-    private bool _loadingHostFolder;
-    private string? _appearanceFolder;
+    private string? _profilesFolder;
 
-    public SettingsTerminalsViewModel(
-        TerminalSession session, SettingsApplyQueue queue, WtAppearanceImporter appearance,
-        WtProfileProvider profileProvider)
+    public SettingsTerminalsViewModel(TerminalSession session, WtProfileProvider profileProvider)
     {
         _session = session;
-        _queue = queue;
-        _appearance = appearance;
         _profileProvider = profileProvider;
         _profiles = profileProvider.LoadDetails();
+        _profilesFolder = session.Registry.TerminalHost.Folder;
         _session.RegistryChanged += Sync;
-        _session.RegistryChanged += OnHostChanged;
+        _session.RegistryChanged += OnRegistryChanged;
         _session.StateChanged += OnStateChanged;
         Sync();
-        LoadHostFolder();
-        RefreshAppearance();
     }
-
-    /// <summary>What the appearance import can do right now (ADR-0022); drives the button and hint.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanImportAppearance), nameof(HostLooksUnstyled))]
-    [NotifyCanExecuteChangedFor(nameof(ImportAppearanceCommand))]
-    private AppearanceImportState _appearanceState;
-
-    /// <summary>The last import's outcome, shown under the button until the next one.</summary>
-    [ObservableProperty]
-    private string? _appearanceResult;
-
-    public bool CanImportAppearance => AppearanceState != AppearanceImportState.Unavailable;
-
-    public bool HostLooksUnstyled => AppearanceState == AppearanceImportState.Unstyled;
-
-    /// <summary>One-shot, user-triggered: it overwrites the host's appearance (ADR-0022).</summary>
-    [RelayCommand(CanExecute = nameof(CanImportAppearance))]
-    private async Task ImportAppearance()
-    {
-        AppearanceResult = await _appearance.ImportAsync();
-        RefreshAppearance();
-    }
-
-    /// <summary>Re-reads both WT files for the appearance import. Never on a timer.</summary>
-    private void RefreshAppearance() => AppearanceState = _appearance.CurrentState();
 
     /// <summary>
     /// The window calls this when it is shown: the host WT may have created its settings.json,
-    /// or either file been edited, since the page last looked.
+    /// or it may have been edited, since the page last looked.
     /// </summary>
-    public void RefreshFromDisk()
-    {
-        ReloadProfiles();
-        RefreshAppearance();
-    }
+    public void RefreshFromDisk() => ReloadProfiles();
 
     /// <summary>Re-reads the profile list, including into an editor that is already open.</summary>
     private void ReloadProfiles()
@@ -83,62 +46,13 @@ public sealed partial class SettingsTerminalsViewModel : ObservableObject
         Editor?.UseProfiles(_profiles);
     }
 
-    /// <summary>
-    /// The private WT folder (ADR-0021), live-applied through the settings queue like the
-    /// other pages (ADR-0018). Empty means the installed Windows Terminal.
-    /// </summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HostFolderMissing))]
-    private string _terminalHostFolder = string.Empty;
-
-    /// <summary>
-    /// The typed folder has no wt.exe in it: every launch would fail. Checked on the text, not
-    /// on the saved setting, so it updates per keystroke instead of after the debounced save.
-    /// </summary>
-    public bool HostFolderMissing => TerminalHost.IsMissingAt(TerminalHostFolder);
-
-    partial void OnTerminalHostFolderChanged(string value)
+    private void OnRegistryChanged()
     {
-        if (_loadingHostFolder)
+        // A host-folder change (General page or a hand-edit) points at a different settings.json.
+        if (_session.Registry.TerminalHost.Folder != _profilesFolder)
         {
-            return;
-        }
-
-        var folder = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-        _queue.Queue(registry => registry with { TerminalHost = registry.TerminalHost with { Folder = folder } });
-    }
-
-    private void OnHostChanged()
-    {
-        // Our own save echoes back; reloading it would rewrite the box mid-typing.
-        if (!_queue.IsApplyingOwnEdit)
-        {
-            LoadHostFolder();
-        }
-
-        // The saved folder may now point at a different WT, or at one with no settings yet; an
-        // old "Imported…" line would describe the previous host.
-        if (_session.Registry.TerminalHost.Folder != _appearanceFolder)
-        {
-            _appearanceFolder = _session.Registry.TerminalHost.Folder;
-            AppearanceResult = null;
-        }
-
-        // Same host change: the profile list may now come from a different settings.json.
-        ReloadProfiles();
-        RefreshAppearance();
-    }
-
-    private void LoadHostFolder()
-    {
-        _loadingHostFolder = true;
-        try
-        {
-            TerminalHostFolder = _session.Registry.TerminalHost.Folder ?? string.Empty;
-        }
-        finally
-        {
-            _loadingHostFolder = false;
+            _profilesFolder = _session.Registry.TerminalHost.Folder;
+            ReloadProfiles();
         }
     }
 

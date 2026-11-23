@@ -52,11 +52,22 @@ public sealed class JsonRegistryStoreTests : IDisposable
         Assert.Equal(2, loaded.Strip.HiddenThickness);
         Assert.Equal(800, loaded.Strip.CollapseDelayMs);
         Assert.Equal(236, loaded.Strip.RailSizeDips);
-        Assert.Equal(190, loaded.Strip.RailTopHeightDips);
+        Assert.Equal(176, loaded.Strip.RailTopHeightDips);
         Assert.Equal(TopWidthMode.Centered, loaded.Strip.TopWidth);
         Assert.True(loaded.ThumbnailMotionEnabled);
         Assert.True(loaded.Strip.ClickMinimizesFocused);
         Assert.Null(loaded.TerminalHost.Folder);
+        Assert.Equal(new SettingsWindowLayout(), loaded.SettingsWindow);
+    }
+
+    [Fact]
+    public async Task Settings_window_layout_round_trips()
+    {
+        var store = new JsonRegistryStore(PathFor("switchboard.json"));
+        var layout = new SettingsWindowLayout { Width = 1500, Height = 900, EditorWidth = 520 };
+        await store.SaveAsync(new RegistryFile { SettingsWindow = layout });
+
+        Assert.Equal(layout, (await store.LoadAsync()).SettingsWindow);
     }
 
     [Fact]

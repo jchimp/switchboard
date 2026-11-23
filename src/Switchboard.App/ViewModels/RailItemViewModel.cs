@@ -5,7 +5,7 @@ using Switchboard.Core.Status;
 
 namespace Switchboard.App.ViewModels;
 
-/// <summary>One rail row: name, shell · distro · cwd sub-line, jump-key badge, state.</summary>
+/// <summary>One rail card: name, jump-key badge and state; distro · folder on hover.</summary>
 public sealed partial class RailItemViewModel : ObservableObject
 {
     public RailItemViewModel(TerminalDefinition definition, int position)
@@ -25,7 +25,11 @@ public sealed partial class RailItemViewModel : ObservableObject
 
     public SolidColorBrush Brush { get; }
 
-    public string SubLine => string.Join(" · ", Parts());
+    /// <summary>
+    /// Distro and folder, shown as the card's tooltip; null (no tooltip at all, not an empty
+    /// box) when the terminal has neither. Off the card so the name can be large (2026-11-22).
+    /// </summary>
+    public string? HoverDetail => string.Join(" · ", Parts()) is { Length: > 0 } detail ? detail : null;
 
     /// <summary>Digit shown in the key badge, mirroring ActivateByJumpKeyAsync's resolution.</summary>
     public string JumpKeyText => (Definition.JumpKey ?? (Position <= 9 ? Position : null))?.ToString() ?? string.Empty;
@@ -47,16 +51,10 @@ public sealed partial class RailItemViewModel : ObservableObject
 
     public double RowOpacity => IsClosed ? 0.45 : 1.0;
 
+    // No shell name: it said "pwsh" on almost every card and told the user nothing the
+    // terminal's own name didn't. Distro and folder are what tell two terminals apart.
     private IEnumerable<string> Parts()
     {
-        yield return Definition.Shell switch
-        {
-            ShellKind.WindowsPowerShell => "powershell",
-            ShellKind.Cmd => "cmd",
-            ShellKind.Wsl => "wsl",
-            _ => "pwsh",
-        };
-
         if (Definition.Distro is { Length: > 0 } distro)
         {
             yield return distro;

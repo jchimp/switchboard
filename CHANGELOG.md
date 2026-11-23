@@ -6,6 +6,18 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+### Changed
+
+- **Settings has a General tab.** The terminal host folder and the appearance import moved
+  there. The Terminals tab is now just the terminal list and its editor, with a draggable
+  splitter between them and a wider editor. Settings remembers its size and the split.
+- **Rail cards are easier to read.** The terminal name is much larger (18 pt). The line
+  under it is gone: the shell name ("pwsh") was dropped, and the distro and folder now show
+  when you hover over a card. The jump number sits at the card's right edge with the edit
+  pencil to its left. The top rail is shorter to match: its default height is now 176 DIP
+  (was 190); an existing setting is kept, so lower it with Settings → Edge strip →
+  "Rail height on the top edge".
+
 ## 0.1.1 (2026-11-22)
 
 ### Changed

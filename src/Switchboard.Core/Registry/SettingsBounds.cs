@@ -22,6 +22,12 @@ public static class SettingsBounds
     public const int MinRailTopHeightDips = 120;
     public const int MaxRailTopHeightDips = 400;
 
+    // The settings window's own MinWidth/MinHeight and the editor's MinWidth (SettingsWindow.xaml).
+    public const int MinSettingsWidth = 900;
+    public const int MinSettingsHeight = 520;
+    public const int MaxSettingsSize = 8000;
+    public const int MinEditorWidth = 330;
+
     /// <summary>Returns the settings unchanged when they are already in range.</summary>
     public static StripSettings Clamp(StripSettings strip)
     {
@@ -42,4 +48,17 @@ public static class SettingsBounds
             Monitor = Math.Max(strip.Monitor, 0),
         };
     }
+
+    /// <summary>
+    /// Keeps a remembered settings layout sane: at least the window's minimum size and the
+    /// editor's minimum width. How wide the editor may be depends on the live window, so the
+    /// window caps it against its real grid as it lays out (SettingsWindow.CapEditorWidth);
+    /// a constant copied from XAML here would drift.
+    /// </summary>
+    public static SettingsWindowLayout Clamp(SettingsWindowLayout layout) => layout with
+    {
+        Width = Math.Clamp(layout.Width, MinSettingsWidth, MaxSettingsSize),
+        Height = Math.Clamp(layout.Height, MinSettingsHeight, MaxSettingsSize),
+        EditorWidth = Math.Clamp(layout.EditorWidth, MinEditorWidth, MaxSettingsSize),
+    };
 }
