@@ -27,6 +27,40 @@ public class TerminalHostPathTests
     }
 
     [Fact]
+    public void A_set_folder_wins_over_the_default()
+    {
+        const string other = @"D:\tools\wt";
+        Assert.Equal(other, TerminalHostPath.Effective(other + @"\", Folder, _ => true));
+    }
+
+    [Fact]
+    public void A_set_folder_without_wt_is_kept_so_the_error_shows()
+    {
+        const string other = @"D:\tools\wt";
+        Assert.Equal(other, TerminalHostPath.Effective(other, Folder, _ => false));
+    }
+
+    [Fact]
+    public void With_no_folder_set_the_default_is_used_when_it_has_wt()
+    {
+        string? checkedPath = null;
+        var effective = TerminalHostPath.Effective("  ", Folder, path =>
+        {
+            checkedPath = path;
+            return true;
+        });
+
+        Assert.Equal(Folder, effective);
+        Assert.Equal(Folder + @"\wt.exe", checkedPath);
+    }
+
+    [Fact]
+    public void With_no_folder_set_and_no_wt_in_the_default_wt_comes_from_path()
+    {
+        Assert.Null(TerminalHostPath.Effective(null, Folder, _ => false));
+    }
+
+    [Fact]
     public void Without_a_folder_wt_comes_from_path_and_there_is_no_settings_file()
     {
         Assert.Equal("wt.exe", TerminalHostPath.WtExecutable(null));

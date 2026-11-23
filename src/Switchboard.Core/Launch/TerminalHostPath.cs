@@ -22,6 +22,22 @@ public static class TerminalHostPath
         return trimmed.Length == 0 ? null : trimmed;
     }
 
+    /// <summary>
+    /// The host folder to use (ADR-0023). A folder the user set always wins, even one with no
+    /// <c>wt.exe</c>, so a typo shows as an error instead of silently falling back. With none
+    /// set, <paramref name="defaultFolder"/> is used if it holds <c>wt.exe</c> — where
+    /// <c>install.ps1 -WithTerminalHost</c> puts it — else null for <c>wt.exe</c> on PATH.
+    /// </summary>
+    public static string? Effective(string? configured, string? defaultFolder, Func<string, bool> fileExists)
+    {
+        if (Normalize(configured) is { } folder)
+        {
+            return folder;
+        }
+
+        return Normalize(defaultFolder) is { } fallback && fileExists(WtExecutable(fallback)) ? fallback : null;
+    }
+
     /// <summary>The <c>wt.exe</c> to run: the host's when a folder is set, else the one on PATH.</summary>
     public static string WtExecutable(string? folder) =>
         Normalize(folder) is { } f ? $@"{f}\{WtCommandBuilder.Executable}" : WtCommandBuilder.Executable;
