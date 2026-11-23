@@ -6,6 +6,8 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+## 0.1.1 (2026-11-22)
+
 ### Changed
 
 - **Terminal editor profile picker.** In Settings → Terminals, the Windows Terminal
