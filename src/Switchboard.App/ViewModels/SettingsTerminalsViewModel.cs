@@ -17,18 +17,50 @@ public sealed partial class SettingsTerminalsViewModel : ObservableObject
 {
     private readonly TerminalSession _session;
     private readonly SettingsApplyQueue _queue;
+    private readonly WtAppearanceImporter _appearance;
     private bool _loadingHostFolder;
+    private string? _appearanceFolder;
 
-    public SettingsTerminalsViewModel(TerminalSession session, SettingsApplyQueue queue)
+    public SettingsTerminalsViewModel(TerminalSession session, SettingsApplyQueue queue, WtAppearanceImporter appearance)
     {
         _session = session;
         _queue = queue;
+        _appearance = appearance;
         _session.RegistryChanged += Sync;
         _session.RegistryChanged += OnHostChanged;
         _session.StateChanged += OnStateChanged;
         Sync();
         LoadHostFolder();
+        RefreshAppearance();
     }
+
+    /// <summary>What the appearance import can do right now (ADR-0022); drives the button and hint.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanImportAppearance), nameof(HostLooksUnstyled))]
+    [NotifyCanExecuteChangedFor(nameof(ImportAppearanceCommand))]
+    private AppearanceImportState _appearanceState;
+
+    /// <summary>The last import's outcome, shown under the button until the next one.</summary>
+    [ObservableProperty]
+    private string? _appearanceResult;
+
+    public bool CanImportAppearance => AppearanceState != AppearanceImportState.Unavailable;
+
+    public bool HostLooksUnstyled => AppearanceState == AppearanceImportState.Unstyled;
+
+    /// <summary>One-shot, user-triggered: it overwrites the host's appearance (ADR-0022).</summary>
+    [RelayCommand(CanExecute = nameof(CanImportAppearance))]
+    private async Task ImportAppearance()
+    {
+        AppearanceResult = await _appearance.ImportAsync();
+        RefreshAppearance();
+    }
+
+    /// <summary>
+    /// Re-reads both WT files. The window calls this when it is shown: the host WT may have
+    /// created its settings.json, or either file been edited, since the page last looked.
+    /// </summary>
+    public void RefreshAppearance() => AppearanceState = _appearance.CurrentState();
 
     /// <summary>
     /// The private WT folder (ADR-0021), live-applied through the settings queue like the
@@ -62,6 +94,16 @@ public sealed partial class SettingsTerminalsViewModel : ObservableObject
         {
             LoadHostFolder();
         }
+
+        // The saved folder may now point at a different WT, or at one with no settings yet; an
+        // old "Imported…" line would describe the previous host.
+        if (_session.Registry.TerminalHost.Folder != _appearanceFolder)
+        {
+            _appearanceFolder = _session.Registry.TerminalHost.Folder;
+            AppearanceResult = null;
+        }
+
+        RefreshAppearance();
     }
 
     private void LoadHostFolder()

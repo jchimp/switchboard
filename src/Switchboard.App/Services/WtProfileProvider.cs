@@ -32,6 +32,18 @@ public sealed class WtProfileProvider
             yield break;
         }
 
+        foreach (var path in InstalledSettingsPaths())
+        {
+            yield return path;
+        }
+    }
+
+    /// <summary>
+    /// Where the installed (not the host's) Windows Terminal keeps settings.json, in the order
+    /// to try. Shared with the appearance import (ADR-0022) so the two never disagree.
+    /// </summary>
+    public static IEnumerable<string> InstalledSettingsPaths()
+    {
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         yield return Path.Combine(local, @"Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json");
         yield return Path.Combine(local, @"Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json");
