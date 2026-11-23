@@ -402,8 +402,46 @@
                   </ItemsControl>
 
                   <TextBlock Text="Windows Terminal profile" Style="{StaticResource FieldLabel}" />
-                  <TextBox Style="{StaticResource Field}"
-                           Text="{Binding Profile, UpdateSourceTrigger=PropertyChanged}" />
+                  <!-- Editable: a profile WT generates later, or one in another file, can still be typed. -->
+                  <ComboBox ItemsSource="{Binding ProfileNames}" IsEditable="True" FontSize="13" Margin="0,0,0,4"
+                            Text="{Binding Profile, UpdateSourceTrigger=PropertyChanged}" />
+                  <TextBlock Style="{StaticResource Hint}" Foreground="{StaticResource SettingsError}" Margin="0,0,0,8"
+                             Text="Windows Terminal has no profile by this name; it would open its default profile instead."
+                             Visibility="{Binding ProfileNotFound, Converter={StaticResource BoolToVis}}" />
+
+                  <!-- What the profile runs and looks like (read-only); WT's own file is the place to change it. -->
+                  <Border BorderBrush="{StaticResource SettingsLine}" BorderThickness="1" CornerRadius="4"
+                          Padding="8,6" Margin="0,0,0,11"
+                          Visibility="{Binding HasProfileDetail, Converter={StaticResource BoolToVis}}">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                      </Grid.RowDefinitions>
+                      <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Hint}" Margin="0,0,10,2" Text="Runs" />
+                      <TextBlock Grid.Row="0" Grid.Column="1" Style="{StaticResource Hint}" Margin="0,0,0,2"
+                                 FontFamily="Cascadia Mono,Consolas" Text="{Binding ProfileCommandline}" />
+                      <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource Hint}" Margin="0,0,10,2" Text="Starts in" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource Hint}" Margin="0,0,0,2"
+                                 FontFamily="Cascadia Mono,Consolas" Text="{Binding ProfileStartingDirectory}" />
+                      <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource Hint}" Margin="0,0,10,2" Text="Font" />
+                      <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource Hint}" Margin="0,0,0,2"
+                                 Text="{Binding ProfileFont}" />
+                      <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource Hint}" Margin="0,0,10,2" Text="Colors" />
+                      <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource Hint}" Margin="0,0,0,2"
+                                 Text="{Binding ProfileColorScheme}" />
+                      <Button Grid.Row="4" Grid.ColumnSpan="2" Style="{StaticResource GhostButton}" HorizontalAlignment="Left"
+                              Margin="0,6,0,0" Content="Open settings.json"
+                              ToolTip="{Binding SettingsFilePath}" Command="{Binding OpenSettingsFileCommand}" />
+                    </Grid>
+                  </Border>
 
                   <TextBlock Text="Shell" Style="{StaticResource FieldLabel}" />
                   <ComboBox ItemsSource="{Binding Shells}" SelectedItem="{Binding Shell}"

@@ -33,7 +33,7 @@ public partial class SettingsWindow : Window
         {
             if (e.NewValue is true)
             {
-                vm.Terminals.RefreshAppearance();
+                vm.Terminals.RefreshFromDisk();
             }
         };
     }

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Switchboard.App.Services;
 using Switchboard.Core.Registry;
 using Switchboard.Core.Status;
+using Switchboard.Core.WindowsTerminal;
 using Switchboard.Windows;
 
 namespace Switchboard.App.ViewModels;
@@ -18,14 +19,20 @@ public sealed partial class SettingsTerminalsViewModel : ObservableObject
     private readonly TerminalSession _session;
     private readonly SettingsApplyQueue _queue;
     private readonly WtAppearanceImporter _appearance;
+    private readonly WtProfileProvider _profileProvider;
+    private WtProfileCatalog _profiles;
     private bool _loadingHostFolder;
     private string? _appearanceFolder;
 
-    public SettingsTerminalsViewModel(TerminalSession session, SettingsApplyQueue queue, WtAppearanceImporter appearance)
+    public SettingsTerminalsViewModel(
+        TerminalSession session, SettingsApplyQueue queue, WtAppearanceImporter appearance,
+        WtProfileProvider profileProvider)
     {
         _session = session;
         _queue = queue;
         _appearance = appearance;
+        _profileProvider = profileProvider;
+        _profiles = profileProvider.LoadDetails();
         _session.RegistryChanged += Sync;
         _session.RegistryChanged += OnHostChanged;
         _session.StateChanged += OnStateChanged;
@@ -56,11 +63,25 @@ public sealed partial class SettingsTerminalsViewModel : ObservableObject
         RefreshAppearance();
     }
 
+    /// <summary>Re-reads both WT files for the appearance import. Never on a timer.</summary>
+    private void RefreshAppearance() => AppearanceState = _appearance.CurrentState();
+
     /// <summary>
-    /// Re-reads both WT files. The window calls this when it is shown: the host WT may have
-    /// created its settings.json, or either file been edited, since the page last looked.
+    /// The window calls this when it is shown: the host WT may have created its settings.json,
+    /// or either file been edited, since the page last looked.
     /// </summary>
-    public void RefreshAppearance() => AppearanceState = _appearance.CurrentState();
+    public void RefreshFromDisk()
+    {
+        ReloadProfiles();
+        RefreshAppearance();
+    }
+
+    /// <summary>Re-reads the profile list, including into an editor that is already open.</summary>
+    private void ReloadProfiles()
+    {
+        _profiles = _profileProvider.LoadDetails();
+        Editor?.UseProfiles(_profiles);
+    }
 
     /// <summary>
     /// The private WT folder (ADR-0021), live-applied through the settings queue like the
@@ -103,6 +124,8 @@ public sealed partial class SettingsTerminalsViewModel : ObservableObject
             AppearanceResult = null;
         }
 
+        // Same host change: the profile list may now come from a different settings.json.
+        ReloadProfiles();
         RefreshAppearance();
     }
 
@@ -205,7 +228,7 @@ public sealed partial class SettingsTerminalsViewModel : ObservableObject
 
     private TerminalEditorViewModel NewEditor(TerminalDefinition definition, bool isNew)
     {
-        var editor = new TerminalEditorViewModel(_session, definition, isNew);
+        var editor = new TerminalEditorViewModel(_session, definition, isNew, _profiles);
         editor.Saved += name => Select(name);
         return editor;
     }

@@ -53,22 +53,40 @@ public sealed class WtProfileProvider
     /// <summary>Visible profiles in WT's order; empty when no settings file exists or parses.</summary>
     public IReadOnlyList<WtProfile> Load()
     {
+        if (ReadSettingsFile() is not { } file)
+        {
+            _log.LogWarning("No Windows Terminal settings.json found; picker offers the default profile only");
+            return [];
+        }
+
+        var profiles = WtSettingsReader.Parse(file.Text);
+        if (profiles.Count == 0)
+        {
+            _log.LogWarning("WT settings at {Path} yielded no profiles", file.Path);
+        }
+
+        return profiles;
+    }
+
+    /// <summary>
+    /// Profiles with what each one runs and looks like, plus the file they came from, for the
+    /// terminal editor. Same file as <see cref="Load"/>: the host's when one is set.
+    /// </summary>
+    public WtProfileCatalog LoadDetails() =>
+        ReadSettingsFile() is { } file
+            ? new WtProfileCatalog(file.Path, WtProfileReader.Read(file.Text))
+            : WtProfileCatalog.Empty;
+
+    private (string Path, string Text)? ReadSettingsFile()
+    {
         foreach (var path in CandidatePaths())
         {
             try
             {
-                if (!File.Exists(path))
+                if (File.Exists(path))
                 {
-                    continue;
+                    return (path, File.ReadAllText(path));
                 }
-
-                var profiles = WtSettingsReader.Parse(File.ReadAllText(path));
-                if (profiles.Count == 0)
-                {
-                    _log.LogWarning("WT settings at {Path} yielded no profiles", path);
-                }
-
-                return profiles;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -76,7 +94,7 @@ public sealed class WtProfileProvider
             }
         }
 
-        _log.LogWarning("No Windows Terminal settings.json found; picker offers the default profile only");
-        return [];
+        return null;
     }
 }
+
