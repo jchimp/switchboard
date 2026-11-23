@@ -25,7 +25,7 @@ adopted or imported (ADR-0021). 163/163 tests. Spike passed (separate process, s
 
 ## M5 Checks
 - [ ] Spike leftover: Store WT on `"windowingBehavior": "useExisting"`, a Switchboard terminal open → `wt` from Start opens in a Store window, never as a tab in the Switchboard one
-- [ ] Copy your profiles (Ubuntu, PowerShell, …) into `%LOCALAPPDATA%\Switchboard\wt\settings\settings.json`
+- [x] Profiles in the terminal host: none to copy. The portable WT generates the same dynamic profiles (PowerShell, Ubuntu, Git Bash, …) on first run, and launches go by profile name. Only appearance differs (font, colors, opacity); importing it is the next item of work
 - [x] Settings → Terminals: set the host folder to `%LOCALAPPDATA%\Switchboard\wt` → no red error; type a bad path → error shows; clear it → error goes
 - [x] Strip click launches each terminal in the portable WT (`Get-Process WindowsTerminal | select Id,Path` shows the portable path); colors, status rules, thumbnails, attention pulse, hide-from-taskbar all still work
 - [x] Open a Store WT window and retitle it to a registered name (`$Host.UI.RawUI.WindowTitle = 'anvil'`), restart Switchboard → it is not bound, not colored, keeps its taskbar button
