@@ -46,7 +46,7 @@
         </Border>
       </Border>
       <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                    x:Name="ListScroller" Padding="8,8,8,8" ScrollChanged="ListScroller_ScrollChanged">
+                    x:Name="ListScroller" Padding="8,8,8,4" ScrollChanged="ListScroller_ScrollChanged">
         <ItemsControl ItemsSource="{Binding Items}" x:Name="Rows">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
@@ -56,7 +56,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="{x:Type vm:RailItemViewModel}">
               <Border x:Name="Card" Width="{x:Static rail:RailMetrics.CardWidthDips}"
-                      Margin="0,3" Padding="6" CornerRadius="6"
+                      Margin="0,3" Padding="6,6,6,3" CornerRadius="6"
                       BorderThickness="1" BorderBrush="Transparent" Background="Transparent"
                       Opacity="{Binding RowOpacity}" Cursor="Hand"
                       ToolTip="{Binding HoverDetail}"
@@ -71,8 +71,9 @@
                   <Border x:Name="ThumbSlot" Height="115" CornerRadius="3"
                           Background="#FF101010" />
                   <!-- Name row only: folder and distro are in the card's tooltip, which buys the
-                       18-pt name its room in the fixed 190-DIP top rail (about 10 DIP to spare; a
-                       card that overflows it loses its live thumbnail). -->
+                       18-pt name its room. Card + list padding + border come to about 173 DIP;
+                       the top rail's default height (176, StripSettings.RailTopHeightDips) leaves
+                       ~3 DIP for pixel rounding. A card that overflows loses its live thumbnail. -->
                   <Grid Margin="0,5,0,0">
                     <Grid.ColumnDefinitions>
                       <ColumnDefinition Width="*" />

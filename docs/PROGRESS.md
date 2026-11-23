@@ -15,7 +15,7 @@ tab with a list/editor splitter, remembered window size and split, and a clearer
 - [ ] Open and close Settings without moving anything → `switchboard.json` is not rewritten (check its timestamp)
 - [ ] Maximize, close, reopen → it opens at the size it had before maximizing
 - [ ] Rail cards: name is 18 pt with no line under it; hovering a card with a folder or distro set shows them in a tooltip (no empty tooltip otherwise); the busy dot shows next to the name while working; number badge at the right edge; pencil appears to its left on hover without moving the badge
-- [ ] Top edge, Centered: the rail has no scrollbar and the strip segments still line up with the cards
+- [ ] Set Settings → Edge strip → "Rail height on the top edge" to 176 (the new default; your file keeps 190) → little space under the names, no scrollbar, every card keeps its live thumbnail, and the strip segments still line up with the cards; check at 100 % and 175 % scaling
 
 ### Superseded focus (appearance import)
 Appearance import on branch `wt-appearance-import` (ADR-0022, PRD R29): Settings → Terminals
