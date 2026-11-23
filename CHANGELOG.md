@@ -6,6 +6,8 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+## 0.1.3 (2026-11-23)
+
 ### Added
 
 - **Installer.** The release zip now has `install.ps1`. Run it from the unzipped folder to
