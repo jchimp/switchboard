@@ -49,6 +49,8 @@ Milestones are vertical slices; each one is usable on its own.
   in Centered mode the strip segments line up with the cards (ADR-0012 amendment).
 - Import the installed WT's appearance into the terminal host with one button: fonts,
   colors, opacity, schemes; never command lines or profiles (ADR-0022, PRD R29).
+- Terminal editor: pick the WT profile from a list; shell and WSL distro follow it; a
+  read-only panel shows what the profile runs and looks like, with "Open settings.json" (R26).
 
 ## M6 — Polish & ship (was M5)
 - Named-pipe status source with sample `pwsh` and `bash` hooks (PRD R19 source 4). Deferred
