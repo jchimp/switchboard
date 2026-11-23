@@ -6,6 +6,16 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+### Changed
+
+- **Terminal editor profile picker.** In Settings → Terminals, the Windows Terminal
+  profile is picked from the profiles WT actually has (the terminal host's when set),
+  instead of typed. Picking one sets the shell, and for WSL the distro, so the two can
+  no longer disagree. A read-only panel shows what the profile runs and looks like
+  (command line, starting folder, font, colors), with a button to open WT's
+  settings.json. A name WT doesn't know is flagged, because WT would open its default
+  profile instead.
+
 ## 0.1.0 (2026-11-22)
 
 First release. Everything from milestones M0 to M5.

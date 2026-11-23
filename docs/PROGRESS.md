@@ -5,6 +5,18 @@ Appearance import on branch `wt-appearance-import` (ADR-0022, PRD R29): Settings
 copies the installed WT's fonts, colors, opacity and schemes into the terminal host with one
 button. M5 (PR #3) and the rail menu button (PR #4) are merged.
 
+## Terminal profile panel checks (branch `terminal-profiles`)
+- [ ] Settings → Terminals → select a terminal: the profile field is a dropdown of the host's profiles (PowerShell, Windows PowerShell, Ubuntu, …)
+- [ ] Open an existing terminal without touching the profile → Shell and Distro keep their saved values
+- [ ] Pick Ubuntu → Shell becomes wsl and Distro becomes Ubuntu; pick Windows PowerShell → Shell becomes windowsPowerShell; pick Git Bash → Shell stays as it was
+- [ ] The panel shows command line, starting folder, font and colors; after an appearance import the font and colors match the installed WT
+- [ ] Type a name WT doesn't have → red "no profile by this name" hint; the panel hides
+- [ ] Set Shell to cmd, then type `WSL-dev` in the profile box: `W` auto-completes to Windows PowerShell (Shell shows windowsPowerShell for a moment), and at `WSL-dev` Shell is back to cmd
+- [ ] Change Shell by hand, then pick a profile and clear it again → Shell returns to your hand-picked value
+- [ ] A WSL profile whose command line is `wsl.exe -d Debian` sets Distro to Debian, not its profile name
+- [ ] Open settings.json → the host's file opens in your editor
+- [ ] Change a profile in WT's settings, close and reopen Settings, reselect the terminal → the panel shows the change
+
 ## Appearance import checks
 - [ ] Fresh host (WT's default look): Settings → Terminals shows the "uses Windows Terminal's default look" hint and the Import button
 - [ ] Import → the message says how many profiles were restyled; open Switchboard terminals change font/colors within a second, no restart
