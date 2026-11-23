@@ -3,19 +3,19 @@
 ## Current Focus
 Rail menu button on branch `rail-menu-button` (ADR-0012 amendment 2026-11-22). The rail's
 foot (Unbound list and "+ New terminal") is replaced by one "…" button with a menu. On the
-top edge in Centered mode, strip segments now line up exactly with the rail cards. M5 is in
-PR #3. The checks below need hardware.
+top edge in Centered mode, strip segments now line up exactly with the rail cards. M5 is
+merged (PR #3); this work is PR #4. Menus now take focus while open so Esc and click-away close them.
 
 ## Rail menu checks
-- [ ] Top edge, Centered, Show closed terminals on, with 1, 5 and 9 terminals, at 100 % and 175 % scaling: each strip segment sits over its rail card (within 1 px), and no horizontal scrollbar appears
-- [ ] The "…" button is never covered by a thumbnail, with any card count; with more cards than fit (side edge, or 9+ on a 1920-px top edge), scrolled-off cards show no live preview and scrolling brings it back
-- [ ] Click "…" → the menu opens; the rail stays open; the terminal you were typing in keeps focus after the menu closes (Esc or click-away)
-- [ ] Menu → New terminal → the rail closes and a terminal launches with the quick-launch defaults (no picker; same as the old "+ New terminal" button)
-- [ ] With the "…" menu open, click "…" again → the menu closes and does not reopen
-- [ ] Menu → Adopt window ▸ lists only unbound windows of the private-host WT (open one with Ctrl+Shift+N in a Switchboard terminal); a Store WT window never appears; adopting one binds and colors it
-- [ ] Right-click the strip and right-click the rail → both menus show the same items, including New terminal
+- [x] Top edge, Centered, Show closed terminals on, with 1, 5 and 9 terminals, at 100 % and 175 % scaling: each strip segment sits over its rail card (within 1 px), and no horizontal scrollbar appears
+- [x] The "…" button is never covered by a thumbnail, with any card count; with more cards than fit (side edge, or 9+ on a 1920-px top edge), scrolled-off cards show no live preview and scrolling brings it back
+- [x] Click "…" → the menu opens; the rail stays open; the terminal you were typing in keeps focus after the menu closes (Esc or click-away)
+- [x] Menu → New terminal → the rail closes and a terminal launches with the quick-launch defaults (no picker; same as the old "+ New terminal" button)
+- [x] With the "…" menu open, click "…" again → the menu closes and does not reopen
+- [x] Menu → Adopt window ▸ lists only unbound windows of the private-host WT (open one with Ctrl+Shift+N in a Switchboard terminal); a Store WT window never appears; adopting one binds and colors it
+- [x] Right-click the strip and right-click the rail → both menus show the same items, including New terminal
 - [ ] Left and right edges: the "…" button sits in a small row at the bottom of the rail and the menu works
-- [ ] Top edge, Full width: strip and rail still look right (even segment split, no gaps or overlap)
+- [x] Top edge, Full width: strip and rail still look right (even segment split, no gaps or overlap)
 
 ### Superseded focus (M5)
 M5 (private terminal host) code-complete on branch `private-terminal-host`: no adoption by
@@ -26,12 +26,12 @@ adopted or imported (ADR-0021). 163/163 tests. Spike passed (separate process, s
 ## M5 Checks
 - [ ] Spike leftover: Store WT on `"windowingBehavior": "useExisting"`, a Switchboard terminal open → `wt` from Start opens in a Store window, never as a tab in the Switchboard one
 - [ ] Copy your profiles (Ubuntu, PowerShell, …) into `%LOCALAPPDATA%\Switchboard\wt\settings\settings.json`
-- [ ] Settings → Terminals: set the host folder to `%LOCALAPPDATA%\Switchboard\wt` → no red error; type a bad path → error shows; clear it → error goes
-- [ ] Strip click launches each terminal in the portable WT (`Get-Process WindowsTerminal | select Id,Path` shows the portable path); colors, status rules, thumbnails, attention pulse, hide-from-taskbar all still work
-- [ ] Open a Store WT window and retitle it to a registered name (`$Host.UI.RawUI.WindowTitle = 'anvil'`), restart Switchboard → it is not bound, not colored, keeps its taskbar button
-- [ ] Rail "Unbound" and Settings import list only portable-WT windows (open one with Ctrl+Shift+N inside a Switchboard terminal); Store WT windows never appear
-- [ ] Restart Switchboard with terminals running → all rebind by handle (log: "Recovered N windows by handle")
-- [ ] Ctrl+Alt+N picker offers the portable WT's profiles
+- [x] Settings → Terminals: set the host folder to `%LOCALAPPDATA%\Switchboard\wt` → no red error; type a bad path → error shows; clear it → error goes
+- [x] Strip click launches each terminal in the portable WT (`Get-Process WindowsTerminal | select Id,Path` shows the portable path); colors, status rules, thumbnails, attention pulse, hide-from-taskbar all still work
+- [x] Open a Store WT window and retitle it to a registered name (`$Host.UI.RawUI.WindowTitle = 'anvil'`), restart Switchboard → it is not bound, not colored, keeps its taskbar button
+- [x] Rail "Unbound" and Settings import list only portable-WT windows (open one with Ctrl+Shift+N inside a Switchboard terminal); Store WT windows never appear
+- [x] Restart Switchboard with terminals running → all rebind by handle (log: "Recovered N windows by handle")
+- [x] Ctrl+Alt+N picker offers the portable WT's profiles
 
 ### Superseded focus (M4)
 M4 code-complete on branch `m4-settings-ui`: the settings window (Terminals / Edge strip /
