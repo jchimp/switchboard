@@ -10,6 +10,5 @@
     <Deterministic>true</Deterministic>
     <Authors>Jeremy</Authors>
     <Product>Switchboard</Product>
-    <Version>0.1.0</Version>
   </PropertyGroup>
 </Project>
