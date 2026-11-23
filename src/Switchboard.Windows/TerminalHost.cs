@@ -28,22 +28,43 @@ public sealed class TerminalHost
     }
 
     /// <summary>
-    /// The host folder with environment variables expanded, or null for "<c>wt.exe</c> on PATH,
-    /// any WT window counts". Set it to the raw registry value; expansion happens here.
+    /// Where <c>install.ps1 -WithTerminalHost</c> puts the portable WT, used when the registry
+    /// names no folder and this one has <c>wt.exe</c> (ADR-0023).
+    /// </summary>
+    public static string DefaultFolder { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Switchboard", "wt");
+
+    /// <summary>
+    /// The host folder in use, environment variables expanded, or null for "<c>wt.exe</c> on
+    /// PATH, any WT window counts". Set it to the raw registry value; expansion and the
+    /// <see cref="DefaultFolder"/> fallback happen here. The fallback is checked on each set,
+    /// that is whenever the registry is loaded or changes.
     /// </summary>
     public string? Folder
     {
         get => _folder;
         set
         {
-            var next = TerminalHostPath.Normalize(value is null ? null : Environment.ExpandEnvironmentVariables(value));
+            var configured = value is null ? null : Environment.ExpandEnvironmentVariables(value);
+            var next = TerminalHostPath.Effective(configured, DefaultFolder, File.Exists);
             if (next == _folder)
             {
                 return;
             }
 
             _folder = next;
-            _log.LogInformation("Terminal host: {Folder}", next ?? "wt.exe on PATH (any WT window)");
+            if (next is null)
+            {
+                _log.LogInformation("Terminal host: wt.exe on PATH (any WT window)");
+            }
+            else if (TerminalHostPath.Normalize(configured) is null)
+            {
+                _log.LogInformation("Terminal host: {Folder} (default, no folder set)", next);
+            }
+            else
+            {
+                _log.LogInformation("Terminal host: {Folder}", next);
+            }
         }
     }
 

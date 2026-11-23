@@ -50,6 +50,8 @@ PID 33584 from `WindowsApps`, and the portable copy keeps its settings in `wt\se
 - **No pid → path cache.** `Owns` runs on binds and on the rail's scan, never on the
   per-title-change path, so the process query is cheap and pid reuse is not a concern.
 - **No installer.** The user downloads the WT zip and adds `.portable`; the README says how.
+  *Amended by ADR-0023:* `install.ps1 -WithTerminalHost` does this for a pinned WT version,
+  and with no folder set, `%LOCALAPPDATA%\Switchboard\wt` is used when it has `wt.exe`.
 
 ## Consequences
 - The user's own WT windows are invisible to Switchboard: not bound, colored, hidden from the

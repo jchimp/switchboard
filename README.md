@@ -26,6 +26,29 @@ Slide-out rail with live thumbnails and the overlay switcher are milestones 2–
 - [Windows Terminal](https://aka.ms/terminal): either a private portable copy (recommended, see below) or the installed one on `PATH` as `wt.exe`
 - .NET 8 SDK to build
 
+## Install
+
+Download `Switchboard-<version>.zip` from Releases, unzip it, and in the unzipped folder run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -WithTerminalHost
+```
+
+It installs for your user only (no admin) to `%LOCALAPPDATA%\Programs\Switchboard`, adds a
+Start Menu shortcut, and adds Switchboard to Settings > Apps so you can uninstall it there.
+Run it again with a newer zip to upgrade: it stops a running Switchboard, replaces the files
+and starts it again.
+
+| Switch | Does |
+|---|---|
+| `-WithTerminalHost` | Downloads a pinned portable Windows Terminal to `%LOCALAPPDATA%\Switchboard\wt`, checks its SHA-256 and marks it portable. Skipped if that folder already has `wt.exe` |
+| `-StartAtLogin` | Starts Switchboard when you sign in |
+| `-InstallDir <path>` | Installs somewhere else |
+| `-DryRun` | Prints what it would do and changes nothing |
+
+Uninstalling keeps `%APPDATA%\Switchboard` (your terminals) and the terminal host. See
+ADR-0023 for the details. The exe also runs straight from the unzipped folder without installing.
+
 ## Private terminal host (recommended)
 
 Switchboard can run its terminals in its own portable copy of Windows Terminal. That copy is a
@@ -43,8 +66,11 @@ Copy-Item "$env:TEMP\wtx\*\*" $dst -Recurse -Force
 New-Item "$dst\.portable" -ItemType File -Force | Out-Null
 ```
 
-Then set **Settings → Terminals → Terminal host folder** to `%LOCALAPPDATA%\Switchboard\wt`
-(or `"terminalHost": { "folder": "..." }` in `switchboard.json`). The portable copy keeps its
+`install.ps1 -WithTerminalHost` does the steps above for you. With **Settings → General →
+Terminal host folder** left empty, Switchboard uses `%LOCALAPPDATA%\Switchboard\wt` whenever it
+has `wt.exe`, so there is nothing to set. To keep the copy somewhere else, put that folder in
+the setting (or `"terminalHost": { "folder": "..." }` in `switchboard.json`). To go back to the
+installed Windows Terminal, clear the setting and delete or rename that folder. The portable copy keeps its
 own settings in `wt\settings\settings.json`. It generates the same profiles as your installed
 Windows Terminal (PowerShell, Ubuntu, …), so terminals work as they are. To give it the same
 look, press **Import appearance from installed Windows Terminal** on the same settings page: it
