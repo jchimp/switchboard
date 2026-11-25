@@ -33,11 +33,8 @@ public partial class App : Application
             return;
         }
 
-        var logDir = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Switchboard", "logs");
-
         var services = new ServiceCollection();
-        services.AddLogging(b => b.AddDebug().AddProvider(new FileLoggerProvider(logDir)).SetMinimumLevel(LogLevel.Debug));
+        services.AddLogging(b => b.AddDebug().AddProvider(new FileLoggerProvider(FileLoggerProvider.DefaultDirectory)).SetMinimumLevel(LogLevel.Debug));
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IRegistryStore>(_ => new JsonRegistryStore(RegistryPaths.Default, RegistryPaths.Legacy));
         services.AddSingleton(sp => new RegistryWatcher(RegistryPaths.Default, sp.GetRequiredService<TimeProvider>()));
@@ -45,6 +42,7 @@ public partial class App : Application
         services.AddSingleton<ITerminalLauncher, ProcessTerminalLauncher>();
         services.AddSingleton<FrameColorizer>();
         services.AddSingleton<TaskbarVisibility>();
+        services.AddSingleton<StartupShortcut>();
         services.AddSingleton<AppBar>();
         services.AddSingleton<WindowSampler>();
         services.AddSingleton<WindowTracker>();

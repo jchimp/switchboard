@@ -88,6 +88,21 @@
       <Setter Property="FontSize" Value="12" />
     </Style>
 
+    <!-- The default focus rectangle is a black dotted line, invisible on this background. -->
+    <Style x:Key="SettingsFocusVisual">
+      <Setter Property="Control.Template">
+        <Setter.Value>
+          <ControlTemplate>
+            <Rectangle Margin="-2" RadiusX="5" RadiusY="5" StrokeThickness="1"
+                       Stroke="{StaticResource SettingsText}" SnapsToDevicePixels="True" />
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Own template: the default one paints its own light-blue hover and grey disabled faces
+         over our Background, which left near-white text on light blue (about 1.2:1). The style
+         triggers set every state; the template only binds to them. -->
     <Style x:Key="GhostButton" TargetType="Button">
       <Setter Property="Background" Value="{StaticResource SettingsApp2}" />
       <Setter Property="Foreground" Value="{StaticResource SettingsText}" />
@@ -97,13 +112,61 @@
       <Setter Property="FontSize" Value="13" />
       <Setter Property="Margin" Value="0,0,8,0" />
       <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="FocusVisualStyle" Value="{StaticResource SettingsFocusVisual}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4"
+                    Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+              <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                RecognizesAccessKey="True" />
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="Background" Value="{StaticResource SettingsApp3}" />
+          <Setter Property="BorderBrush" Value="{StaticResource SettingsLineHover}" />
+        </Trigger>
+        <Trigger Property="IsPressed" Value="True">
+          <Setter Property="Background" Value="{StaticResource SettingsField}" />
+        </Trigger>
+        <Trigger Property="IsEnabled" Value="False">
+          <Setter Property="Background" Value="{StaticResource SettingsApp2}" />
+          <Setter Property="BorderBrush" Value="{StaticResource SettingsRowLine}" />
+          <Setter Property="Foreground" Value="{StaticResource SettingsDim}" />
+          <Setter Property="Cursor" Value="Arrow" />
+        </Trigger>
+      </Style.Triggers>
     </Style>
 
+    <!-- Dark text on the accent in every state: 5.9:1 normal, 7.5:1 hover, 4.6:1 pressed. -->
     <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource GhostButton}">
       <Setter Property="Background" Value="{StaticResource SettingsAccent}" />
       <Setter Property="BorderBrush" Value="{StaticResource SettingsAccent}" />
-      <Setter Property="Foreground" Value="#FF0B1020" />
+      <Setter Property="Foreground" Value="{StaticResource SettingsOnAccent}" />
       <Setter Property="FontWeight" Value="SemiBold" />
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="Background" Value="{StaticResource SettingsAccentHover}" />
+          <Setter Property="BorderBrush" Value="{StaticResource SettingsAccentHover}" />
+        </Trigger>
+        <Trigger Property="IsPressed" Value="True">
+          <Setter Property="Background" Value="{StaticResource SettingsAccentPressed}" />
+          <Setter Property="BorderBrush" Value="{StaticResource SettingsAccentPressed}" />
+        </Trigger>
+        <Trigger Property="IsEnabled" Value="False">
+          <Setter Property="Background" Value="{StaticResource SettingsApp3}" />
+          <Setter Property="BorderBrush" Value="{StaticResource SettingsLine}" />
+          <Setter Property="Foreground" Value="{StaticResource SettingsDim}" />
+          <Setter Property="Cursor" Value="Arrow" />
+        </Trigger>
+      </Style.Triggers>
     </Style>
 
     <Style x:Key="SettingsCheck" TargetType="CheckBox">
@@ -540,7 +603,30 @@
         <StackPanel MaxWidth="620" HorizontalAlignment="Left" Margin="0,0,12,0">
           <TextBlock Text="General" Style="{StaticResource PageTitle}" />
           <TextBlock Style="{StaticResource PageSub}"
-                     Text="Where Switchboard's terminals come from, and how they look." />
+                     Text="When Switchboard starts, where its terminals come from, and how they look." />
+
+          <!-- Start at sign-in (ADR-0026): the Startup-folder shortcut is the state, not the registry. -->
+          <StackPanel Margin="0,0,0,14">
+            <CheckBox Style="{StaticResource SettingsCheck}" IsChecked="{Binding StartAtSignIn}"
+                      Content="Start Switchboard when I sign in to Windows" Margin="0,0,0,2" />
+            <TextBlock Style="{StaticResource Hint}" Margin="0"
+                       Text="Adds Switchboard.lnk for this exe to your Startup folder. install.ps1 -StartAtLogin makes the same shortcut." />
+            <TextBlock Text="{Binding StartupWarning}">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                  <Setter Property="Foreground" Value="{StaticResource SettingsError}" />
+                  <Setter Property="Margin" Value="0,6,0,0" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding StartupWarning}" Value="{x:Null}">
+                      <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </StackPanel>
+
+          <Border BorderBrush="{StaticResource SettingsLine}" BorderThickness="0,1,0,0" Margin="0,0,0,14" />
 
           <TextBlock Text="Terminal host folder (portable Windows Terminal)" Style="{StaticResource FieldLabel}" />
           <TextBox Style="{StaticResource MonoField}"
@@ -563,6 +649,17 @@
             <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" Text="{Binding AppearanceResult}"
                        MaxWidth="640" HorizontalAlignment="Left" />
           </StackPanel>
+
+          <!-- About -->
+          <Border BorderBrush="{StaticResource SettingsLine}" BorderThickness="0,1,0,0" Margin="0,0,0,14" />
+          <TextBlock Text="About" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource SettingsText}" />
+          <TextBlock FontSize="12.5" Margin="0,2,0,12" Foreground="{StaticResource SettingsMuted}">
+            <Run Text="Switchboard" /> <Run Text="{Binding Version, Mode=OneWay}" />
+          </TextBlock>
+          <TextBlock Text="Settings file" Style="{StaticResource FieldLabel}" />
+          <TextBox Style="{StaticResource MonoField}" IsReadOnly="True" Text="{Binding RegistryFilePath, Mode=OneWay}" />
+          <TextBlock Text="Log folder" Style="{StaticResource FieldLabel}" />
+          <TextBox Style="{StaticResource MonoField}" IsReadOnly="True" Text="{Binding LogFolder, Mode=OneWay}" />
         </StackPanel>
       </ScrollViewer>
 
