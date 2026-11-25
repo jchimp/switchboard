@@ -301,6 +301,45 @@ internal static partial class NativeMethods
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int RegisterWindowMessage(string message);
 
+    // ---- Shell links (Startup-folder shortcut, ADR-0026) ----------------------------------
+
+    /// <summary>CLSID of the shell's ShellLink coclass; it also implements IPersistFile.</summary>
+    public static readonly Guid CLSID_ShellLink = new("00021401-0000-0000-C000-000000000046");
+
+    public const int MAX_PATH = 260;
+
+    /// <summary>
+    /// Reads and writes .lnk files. Method order is the vtable order and must not change;
+    /// the methods Switchboard does not call are declared only to keep the slots aligned.
+    /// </summary>
+    [ComImport]
+    [Guid("000214F9-0000-0000-C000-000000000046")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface IShellLinkW
+    {
+        void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder file, int maxPath, nint findData, uint flags);
+        void GetIDList(out nint idList);
+        void SetIDList(nint idList);
+        void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder name, int maxName);
+        void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string name);
+        void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder dir, int maxPath);
+        void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string dir);
+        void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder args, int maxPath);
+        void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string args);
+        void GetHotkey(out short hotkey);
+        void SetHotkey(short hotkey);
+        void GetShowCmd(out int showCmd);
+        void SetShowCmd(int showCmd);
+        void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder iconPath, int maxIconPath, out int iconIndex);
+        void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string iconPath, int iconIndex);
+        void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string relativePath, uint reserved);
+        void Resolve(nint hwnd, uint flags);
+        void SetPath([MarshalAs(UnmanagedType.LPWStr)] string file);
+    }
+
+    /// <summary>STGM_READ for IPersistFile.Load: the link is only inspected.</summary>
+    public const int STGM_READ = 0x0;
+
     // ---- Extended window styles (hide the strip from Alt-Tab) ---------------------------
 
     public const int GWL_EXSTYLE = -20;

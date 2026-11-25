@@ -6,6 +6,21 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+### Added
+
+- **Start Switchboard when you sign in.** Settings → General has a checkbox that adds or
+  removes Switchboard's shortcut in your Startup folder, the same one `install.ps1
+  -StartAtLogin` makes. It warns you if the shortcut starts a different copy, or if Windows
+  has the entry turned off in Settings → Apps → Startup.
+- **About.** Settings → General shows the Switchboard version and where the settings file and
+  logs are.
+
+### Fixed
+
+- **Readable buttons in Settings.** On hover, buttons turned light blue with white text, and
+  disabled buttons turned light grey. Hovered, pressed and disabled buttons now stay dark and
+  readable, and keyboard focus shows a visible outline.
+
 ## 0.1.4 (2026-11-24)
 
 ### Changed

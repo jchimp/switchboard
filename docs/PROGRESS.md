@@ -16,6 +16,20 @@ default plus starter terminals `term-1`…`term-4` and, when the host is install
 `%LOCALAPPDATA%\Switchboard\wt`. Settings → Terminals "Import from running windows" is
 removed; the rail's "Adopt as…" stays. Store tests pass; the checks below are open.
 
+ADR-0026 (branch `settings-general-startup-about`): Settings → General has a start-at-sign-in
+checkbox backed by the Startup-folder shortcut, an About section, and the Settings buttons
+have their own template so hover, pressed and disabled stay readable. Builds; the checks below
+are open.
+
+## Start at sign-in, About and button checks
+- [ ] Tick "Start Switchboard when I sign in" → `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Switchboard.lnk` exists and points at the running exe; sign out and in → Switchboard starts
+- [ ] Untick → the shortcut is gone
+- [ ] Turn Switchboard off in Windows Settings → Apps → Startup, reopen Settings → the red "Windows has it turned off" line shows
+- [ ] Tick from a `bin\Debug` build, then open Settings in the installed copy → the "starts …, not this copy" line shows; untick and tick → it points at the installed exe
+- [ ] `install.ps1 -StartAtLogin` with Settings closed, then open Settings → the box is ticked
+- [ ] About shows the release version (no `+hash`), the settings file and the log folder; both paths can be selected and copied
+- [ ] Hover, press and Tab through every button on each page (Add terminal, Move up/down, Delete, ✕, + Add rule, Launch, Save, Import appearance, Open settings.json) → text stays readable, disabled Move up/Delete look dim, Tab shows a light outline
+
 ## First-run checks
 - [ ] Rename `%APPDATA%\Switchboard` and start Switchboard → `switchboard.json` exists at once with every setting and `term-1`…`term-4` (jump keys 1–4, distinct colors), shown closed in the rail and launchable; `terminalHost.folder` is `%LOCALAPPDATA%\\Switchboard\\wt`; Settings → General shows that path with no red error
 - [ ] Same with `%LOCALAPPDATA%\Switchboard\wt` renamed too → the file is written, `terminalHost.folder` is absent, launches use the installed WT
