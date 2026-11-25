@@ -30,9 +30,6 @@ public sealed partial class StripViewModel : ObservableObject, ISwitchboardMenuC
 
     public bool IsVertical => Settings.Edge is ScreenEdge.Left or ScreenEdge.Right;
 
-    /// <summary>True while any terminal is in Attention; the auto-hidden strip stays out for it (ADR-0010).</summary>
-    public bool AnyAttention => Items.Any(i => i.WantsAttention);
-
     /// <summary>True while auto-hide has the strip down to its sliver. Set by the window.</summary>
     [ObservableProperty]
     private bool _isCollapsed;
@@ -71,8 +68,6 @@ public sealed partial class StripViewModel : ObservableObject, ISwitchboardMenuC
                 IsActive = def.Name == _session.ForegroundName,
             });
         }
-
-        OnPropertyChanged(nameof(AnyAttention));
     }
 
     private void OnForegroundChanged(string? name)
@@ -97,7 +92,6 @@ public sealed partial class StripViewModel : ObservableObject, ISwitchboardMenuC
             }
 
             item.State = state;
-            OnPropertyChanged(nameof(AnyAttention));
             return;
         }
 

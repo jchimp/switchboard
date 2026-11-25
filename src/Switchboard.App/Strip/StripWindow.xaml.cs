@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -15,7 +14,8 @@ namespace Switchboard.App.Strip;
 /// <summary>
 /// The always-visible edge strip. A borderless, non-activating, topmost window pinned
 /// to one screen edge; each terminal is one colored segment. With auto-hide on it
-/// collapses to a sliver and slides back out on hover or Attention (ADR-0010).
+/// collapses to a sliver and slides back out on hover. Attention pulses in place and does
+/// not slide it out (ADR-0010, amended 2026-11-24).
 /// </summary>
 public partial class StripWindow : Window
 {
@@ -65,7 +65,6 @@ public partial class StripWindow : Window
         // change without changing the visible segments (a Closed terminal added while
         // ShowClosedTerminals is off) — and a hot-reload can flip TopWidth itself.
         session.RegistryChanged += () => Dock();
-        vm.PropertyChanged += OnViewModelPropertyChanged;
 
         // Display changes arrive in bursts (one WM_SETTINGCHANGE per work-area tweak);
         // coalesce them into a single re-dock.
@@ -80,7 +79,7 @@ public partial class StripWindow : Window
         _collapseTimer.Tick += (_, _) =>
         {
             _collapseTimer.Stop();
-            if (AutoHideActive && !IsMouseOver && !_vm.AnyAttention)
+            if (AutoHideActive && !IsMouseOver)
             {
                 SetCollapsed(true); // collapsing under an open rail is fine — it covers us
             }
@@ -113,7 +112,7 @@ public partial class StripWindow : Window
         // countdown when it goes away.
         rail.OpenChanged += open =>
         {
-            if (!open && AutoHideActive && !IsMouseOver && !_vm.AnyAttention)
+            if (!open && AutoHideActive && !IsMouseOver)
             {
                 RestartCollapseTimer();
             }
@@ -213,7 +212,7 @@ public partial class StripWindow : Window
 
         // With rail-on-hover, the sliver is only the trigger surface: expanding it and then
         // sliding the rail out reads as two chained bounces, so the rail is the one motion
-        // and the strip stays collapsed (amends ADR-0010; Attention still expands it, R24).
+        // and the strip stays collapsed (amends ADR-0010).
         if (!(AutoHideActive && _vm.Settings.OpenRailOnHover))
         {
             SetCollapsed(false);
@@ -231,26 +230,6 @@ public partial class StripWindow : Window
         base.OnMouseLeave(e);
         _hoverOpenTimer.Stop();
         if (AutoHideActive)
-        {
-            RestartCollapseTimer();
-        }
-    }
-
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName != nameof(StripViewModel.AnyAttention))
-        {
-            return;
-        }
-
-        // Attention slides the strip out and holds it there until focus clears it
-        // (invariant 6); permitted unprompted motion under invariant 10.
-        if (_vm.AnyAttention)
-        {
-            _collapseTimer.Stop();
-            SetCollapsed(false);
-        }
-        else if (AutoHideActive && !IsMouseOver)
         {
             RestartCollapseTimer();
         }
