@@ -17,9 +17,9 @@ default plus starter terminals `term-1`…`term-4` and, when the host is install
 removed; the rail's "Adopt as…" stays. Store tests pass; the checks below are open.
 
 ## Attention pulse checks (branch `attention-pulse-glow`)
-- [ ] Put a terminal in Attention → its segment pulses brighter than before (about 1.6 s per cycle) and its color glows into the segments beside it, in step with the flash
-- [ ] Focus it → the pulse and the glow stop; the segment shows the normal active glow
-- [ ] With auto-hide on and the strip collapsed, Attention → the strip stays a sliver, the pulse shows in it; the strip slides out only on hover
+- [x] Put a terminal in Attention → its segment pulses brighter than before (about 1.6 s per cycle) and its color glows into the segments beside it, in step with the flash
+- [x] Focus it → the pulse and the glow stop; the segment shows the normal active glow
+- [x] With auto-hide on and the strip collapsed, Attention → the strip stays a sliver, the pulse shows in it; the strip slides out only on hover
 - [ ] With auto-hide on and the strip out (pointer on it), Attention then move the pointer away → the strip collapses after the normal delay while the terminal still pulses
 - [ ] Two terminals in Attention → both pulse; CPU use for Switchboard stays low in Task Manager
 ADR-0026 (branch `settings-general-startup-about`): Settings → General has a start-at-sign-in
@@ -37,10 +37,10 @@ are open.
 - [ ] Hover, press and Tab through every button on each page (Add terminal, Move up/down, Delete, ✕, + Add rule, Launch, Save, Import appearance, Open settings.json) → text stays readable, disabled Move up/Delete look dim, Tab shows a light outline
 
 ## First-run checks
-- [ ] Rename `%APPDATA%\Switchboard` and start Switchboard → `switchboard.json` exists at once with every setting and `term-1`…`term-4` (jump keys 1–4, distinct colors), shown closed in the rail and launchable; `terminalHost.folder` is `%LOCALAPPDATA%\\Switchboard\\wt`; Settings → General shows that path with no red error
+- [x] Rename `%APPDATA%\Switchboard` and start Switchboard → `switchboard.json` exists at once with every setting and `term-1`…`term-4` (jump keys 1–4, distinct colors), shown closed in the rail and launchable; `terminalHost.folder` is `%LOCALAPPDATA%\\Switchboard\\wt`; Settings → General shows that path with no red error
 - [ ] Same with `%LOCALAPPDATA%\Switchboard\wt` renamed too → the file is written, `terminalHost.folder` is absent, launches use the installed WT
 - [ ] An existing `switchboard.json` with no folder set → not rewritten at startup, folder stays empty
-- [ ] Settings → Terminals has no "Import from running windows"; the rail's "Adopt as…" still lists and adopts an unbound host window
+- [x] Settings → Terminals has no "Import from running windows"; the rail's "Adopt as…" still lists and adopts an unbound host window
 
 ## Installer checks
 - [x] `.\scripts\release.ps1 -Apply` → the zip has `install.ps1` and `uninstall.ps1` at its root
@@ -48,7 +48,7 @@ are open.
 - [x] Same from a PowerShell 7 window (`powershell -File ...`) → no `Get-FileHash` error
 - [ ] With Switchboard running and terminals open, install a newer zip → it stops, upgrades, starts again, and the terminals rebind
 - [ ] `-StartAtLogin` → Startup shortcut exists; reinstall without it → shortcut is kept
-- [ ] `install.ps1` (no switches) on a machine with no host → `%LOCALAPPDATA%\Switchboard\wt` has `wt.exe`, `.portable` and `.switchboard-wt-version`; with the Settings > General folder empty, a launch runs from it (`Get-Process WindowsTerminal | select Path`) and the log says "(default, no folder set)"
+- [x] `install.ps1` (no switches) on a machine with no host → `%LOCALAPPDATA%\Switchboard\wt` has `wt.exe`, `.portable` and `.switchboard-wt-version`; with the Settings > General folder empty, a launch runs from it (`Get-Process WindowsTerminal | select Path`) and the log says "(default, no folder set)"
 - [ ] Run it again → "already has Windows Terminal <version>", no download
 - [ ] Host installed by the old script (no `.switchboard-wt-version`), appearance imported → run with Switchboard's terminals closed → host updated, `wt\settings\settings.json` and its `.switchboard.bak` unchanged, no `wt.old-*` left
 - [ ] Same with a Switchboard terminal open → warns that the terminals are open, host unchanged, the terminal keeps running; Switchboard itself still upgrades
