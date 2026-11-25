@@ -192,8 +192,6 @@
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10" LastChildFill="False">
               <Button DockPanel.Dock="Left" Style="{StaticResource PrimaryButton}" Content="+ Add terminal"
                       Command="{Binding AddCommand}" />
-              <Button DockPanel.Dock="Left" Style="{StaticResource GhostButton}"
-                      Content="Import from running windows" Command="{Binding ImportCommand}" />
               <TextBox DockPanel.Dock="Right" Width="150" Style="{StaticResource MonoField}" Margin="0"
                        VerticalAlignment="Center" ToolTip="Filter by name"
                        Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" />
