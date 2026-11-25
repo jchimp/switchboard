@@ -39,11 +39,15 @@ public sealed class JsonRegistryStore : IRegistryStore
 
     public bool AdoptedLegacyFile { get; private set; }
 
+    public bool FoundNoFile { get; private set; }
+
     public async Task<RegistryFile> LoadAsync(CancellationToken ct = default)
     {
         var source = ResolveLoadPath();
+        FoundNoFile = source is null;
         if (source is null)
         {
+            AdoptedLegacyFile = false;
             return RegistryFile.Empty;
         }
 
@@ -109,6 +113,7 @@ public sealed class JsonRegistryStore : IRegistryStore
 
             File.Move(tmp, FilePath, overwrite: true);
             AdoptedLegacyFile = false;
+            FoundNoFile = false;
         }
         finally
         {
