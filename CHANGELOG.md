@@ -6,6 +6,8 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+## 0.1.4 (2026-11-24)
+
 ### Changed
 
 - **A new install starts with a settings file.** The first time Switchboard runs, it writes
