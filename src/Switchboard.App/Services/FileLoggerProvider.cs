@@ -11,6 +11,10 @@ namespace Switchboard.App.Services;
 /// </summary>
 public sealed class FileLoggerProvider : ILoggerProvider
 {
+    /// <summary>Where the app logs; also shown on the General page's About section.</summary>
+    public static string DefaultDirectory => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Switchboard", "logs");
+
     private readonly string _directory;
     private readonly object _sync = new();
     private StreamWriter? _writer;
