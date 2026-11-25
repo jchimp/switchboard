@@ -52,7 +52,7 @@ One primary user (the author). Secondary: anyone who lives in Windows Terminal w
 - R14. The strip never takes focus, never appears in Alt-Tab or the taskbar, and optionally reserves its pixels (app-bar mode).
 - R15. Hovering opens the rail (M2).
 - R23. Optionally (`autoHide`, off by default) the strip collapses to a thin sliver (`hiddenThickness`, default 2 px) after the cursor leaves; touching the screen edge slides it back out. Segment colors remain visible in the sliver. Ignored while app-bar mode is on (ADR-0010).
-- R24. While collapsed, a terminal entering Attention pulses its segment color and slides the strip out to full thickness until that terminal is focused.
+- R24. While collapsed, a terminal entering Attention pulses its segment color and glow in the sliver until that terminal is focused. The strip does not slide out for it (ADR-0010, amended 2026-11-24).
 
 ### Hotkeys
 - R16. Global, configurable chords for: new terminal (picker), quiet new terminal (no UI), jump 1–9, jump to attention, cycle recent (MRU walk, ADR-0015), reapply colors, open switcher (ADR-0016), toggle rail (M2).

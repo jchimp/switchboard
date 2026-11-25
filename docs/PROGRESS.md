@@ -16,6 +16,12 @@ default plus starter terminals `term-1`…`term-4` and, when the host is install
 `%LOCALAPPDATA%\Switchboard\wt`. Settings → Terminals "Import from running windows" is
 removed; the rail's "Adopt as…" stays. Store tests pass; the checks below are open.
 
+## Attention pulse checks (branch `attention-pulse-glow`)
+- [ ] Put a terminal in Attention → its segment pulses brighter than before (about 1.6 s per cycle) and its color glows into the segments beside it, in step with the flash
+- [ ] Focus it → the pulse and the glow stop; the segment shows the normal active glow
+- [ ] With auto-hide on and the strip collapsed, Attention → the strip stays a sliver, the pulse shows in it; the strip slides out only on hover
+- [ ] With auto-hide on and the strip out (pointer on it), Attention then move the pointer away → the strip collapses after the normal delay while the terminal still pulses
+- [ ] Two terminals in Attention → both pulse; CPU use for Switchboard stays low in Task Manager
 ADR-0026 (branch `settings-general-startup-about`): Settings → General has a start-at-sign-in
 checkbox backed by the Startup-folder shortcut, an About section, and the Settings buttons
 have their own template so hover, pressed and disabled stay readable. Builds; the checks below

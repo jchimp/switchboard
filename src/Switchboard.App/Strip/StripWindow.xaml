@@ -52,12 +52,28 @@
           <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding WantsAttention}" Value="True">
               <DataTrigger.EnterActions>
-                <!-- Attention pulse: the one piece of unprompted motion in the product. -->
+                <!-- Attention pulse: the one piece of unprompted motion in the product.
+                     One storyboard, two tracks in step: the overlay brightens the segment,
+                     and the glow spreads its color into the neighbours, which reads from
+                     the corner of the eye. The sine ease lingers at the bright end. The
+                     glow animation outranks the GlowRadius binding only while it runs; an
+                     attention segment is never the active one, so nothing is lost. -->
                 <BeginStoryboard x:Name="PulseStart">
                   <Storyboard RepeatBehavior="Forever" AutoReverse="True">
                     <DoubleAnimation Storyboard.TargetName="PulseOverlay"
                                      Storyboard.TargetProperty="Opacity"
-                                     From="0" To="0.45" Duration="0:0:0.6" />
+                                     From="0" To="0.7" Duration="0:0:0.8">
+                      <DoubleAnimation.EasingFunction>
+                        <SineEase EasingMode="EaseInOut" />
+                      </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation Storyboard.TargetName="Seg"
+                                     Storyboard.TargetProperty="(Border.Effect).(DropShadowEffect.BlurRadius)"
+                                     From="0" To="16" Duration="0:0:0.8">
+                      <DoubleAnimation.EasingFunction>
+                        <SineEase EasingMode="EaseInOut" />
+                      </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
                   </Storyboard>
                 </BeginStoryboard>
               </DataTrigger.EnterActions>

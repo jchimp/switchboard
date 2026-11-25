@@ -6,6 +6,13 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+### Changed
+
+- **Attention is easier to see.** A terminal that needs you now pulses brighter and a little
+  slower on the strip, and its color glows out into the segments beside it with each pulse.
+- **Attention no longer slides the strip out.** With auto-hide on, the strip stays collapsed
+  and the terminal pulses in the sliver. The strip slides out only when you move the pointer
+  to it.
 ### Added
 
 - **Start Switchboard when you sign in.** Settings → General has a checkbox that adds or
