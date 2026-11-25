@@ -35,7 +35,7 @@ Milestones are vertical slices; each one is usable on its own.
   Appearance page: terminals table + editor, edge strip, hotkeys, status rules (ADR-0018).
 - Live-apply, debounced — no Save buttons outside the terminal editor.
 - Hotkey rows show when another application owns a chord, instead of a log-only warning.
-- Import from running windows, in bulk.
+- ~~Import from running windows, in bulk.~~ Removed by ADR-0025; adopt from the rail.
 - Only settings the registry actually has are shown; the named-pipe source moved out (below).
 
 ## M5 — Private terminal host
