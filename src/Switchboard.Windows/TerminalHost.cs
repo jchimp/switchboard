@@ -35,6 +35,15 @@ public sealed class TerminalHost
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Switchboard", "wt");
 
     /// <summary>
+    /// <see cref="DefaultFolder"/> as written into a first-run registry: unexpanded, so the
+    /// file reads the same for any user and the Settings box shows where it points.
+    /// </summary>
+    public const string DefaultFolderSetting = @"%LOCALAPPDATA%\Switchboard\wt";
+
+    /// <summary>True when <see cref="DefaultFolder"/> holds <c>wt.exe</c>, as install.ps1 leaves it.</summary>
+    public static bool DefaultFolderHasHost => File.Exists(TerminalHostPath.WtExecutable(DefaultFolder));
+
+    /// <summary>
     /// The host folder in use, environment variables expanded, or null for "<c>wt.exe</c> on
     /// PATH, any WT window counts". Set it to the raw registry value; expansion and the
     /// <see cref="DefaultFolder"/> fallback happen here. The fallback is checked on each set,
