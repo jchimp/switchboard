@@ -19,6 +19,32 @@ public sealed class JsonRegistryStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Missing_file_is_reported_until_the_first_save()
+    {
+        var store = new JsonRegistryStore(PathFor("switchboard.json"));
+        var file = await store.LoadAsync();
+        Assert.True(store.FoundNoFile);
+
+        await store.SaveAsync(file);
+        Assert.False(store.FoundNoFile);
+
+        await store.LoadAsync();
+        Assert.False(store.FoundNoFile);
+    }
+
+    [Fact]
+    public async Task Legacy_file_is_not_a_first_run()
+    {
+        var legacy = PathFor("registry.json");
+        await new JsonRegistryStore(legacy).SaveAsync(RegistryFile.Empty);
+
+        var store = new JsonRegistryStore(PathFor("switchboard.json"), legacy);
+        await store.LoadAsync();
+        Assert.False(store.FoundNoFile);
+        Assert.True(store.AdoptedLegacyFile);
+    }
+
+    [Fact]
     public async Task Round_trips_and_keeps_a_backup()
     {
         var store = new JsonRegistryStore(PathFor("switchboard.json"));
