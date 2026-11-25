@@ -58,9 +58,6 @@ public sealed partial class SettingsTerminalsViewModel : ObservableObject
 
     public ObservableCollection<SettingsTerminalRowViewModel> Rows { get; } = [];
 
-    /// <summary>Raised when the page wants the import dialog; the window owns the actual dialog.</summary>
-    public event Action? ImportRequested;
-
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelection), nameof(CanMoveUp), nameof(CanMoveDown))]
     private SettingsTerminalRowViewModel? _selectedRow;
@@ -116,9 +113,6 @@ public sealed partial class SettingsTerminalsViewModel : ObservableObject
 
     [RelayCommand]
     private Task MoveDown() => MoveBy(1);
-
-    [RelayCommand]
-    private void Import() => ImportRequested?.Invoke();
 
     private Task MoveBy(int delta)
     {
