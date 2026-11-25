@@ -31,6 +31,38 @@ public sealed record RegistryFile
     public bool ThumbnailMotionEnabled { get; init; } = true;
 
     public static RegistryFile Empty => new();
+
+    /// <summary>How many starter terminals a first run gets (ADR-0025).</summary>
+    public const int FirstRunTerminalCount = 4;
+
+    /// <summary>
+    /// The registry a first run writes: every default, plus starter terminals named from the
+    /// quick-launch prefix (<c>term-1</c>…) so the next quick launch continues the sequence.
+    /// Each takes the quick-launch profile, its own palette hue and the matching jump key.
+    /// </summary>
+    public static RegistryFile FirstRun
+    {
+        get
+        {
+            var file = new RegistryFile();
+            var q = file.QuickLaunch;
+            var terminals = new List<TerminalDefinition>();
+            for (var i = 1; i <= FirstRunTerminalCount; i++)
+            {
+                terminals.Add(new TerminalDefinition
+                {
+                    Name = $"{q.NamePrefix}{i}",
+                    Color = ColorPalette.NextUnused(terminals),
+                    Profile = q.DefaultProfile,
+                    Shell = q.DefaultShell,
+                    Distro = q.DefaultDistro,
+                    JumpKey = i,
+                });
+            }
+
+            return file with { Terminals = terminals };
+        }
+    }
 }
 
 public enum ScreenEdge

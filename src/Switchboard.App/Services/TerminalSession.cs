@@ -8,12 +8,6 @@ using Switchboard.Windows.Tracking;
 
 namespace Switchboard.App.Services;
 
-/// <summary>One row of an import: a definition to register, and the live window to bind it to (R27).</summary>
-public sealed record ImportRequest(TerminalDefinition Definition, nint Hwnd);
-
-/// <summary>An import row that could not land, with a message fit to show beside it.</summary>
-public sealed record ImportFailure(string Name, string Reason);
-
 /// <summary>
 /// The one object that knows about the registry, the live windows, and their status
 /// at the same time. Everything UI-facing reads from here; nothing UI-facing talks to
@@ -127,6 +121,22 @@ public sealed class TerminalSession : IDisposable
         {
             await PersistAsync();
             _log.LogInformation("Adopted the legacy registry file; wrote switchboard.json");
+        }
+
+        // First run: write every default and the starter terminals to disk now, so there is a
+        // file to read and watch, and name the host install.ps1 set up so Settings shows it
+        // (ADR-0025).
+        if (_store.FoundNoFile)
+        {
+            Registry = RegistryFile.FirstRun;
+            if (TerminalHost.DefaultFolderHasHost)
+            {
+                Registry = Registry with { TerminalHost = new TerminalHostSettings { Folder = TerminalHost.DefaultFolderSetting } };
+            }
+
+            await PersistAsync();
+            _log.LogInformation("No registry file; wrote defaults to switchboard.json (host folder: {Folder})",
+                Registry.TerminalHost.Folder ?? "unset");
         }
 
         _status = new StatusEngine(_time, Registry.GlobalStatusRules);
@@ -468,75 +478,6 @@ public sealed class TerminalSession : IDisposable
         Registry = Registry with { Terminals = reordered };
         await PersistAsync();
         RegistryChanged?.Invoke();
-    }
-
-    /// <summary>
-    /// Registers and binds several already-running windows in one step (R27). One save and one
-    /// <see cref="RegistryChanged"/> for the whole batch, unlike calling
-    /// <see cref="AdoptAsNewAsync"/> per window.
-    /// </summary>
-    /// <returns>
-    /// The rows that could not be imported, with a user-facing reason. A window that closed
-    /// between the scan and the click fails alone; the rest of the batch still lands.
-    /// </returns>
-    public async Task<IReadOnlyList<ImportFailure>> ImportAsync(IReadOnlyList<ImportRequest> batch)
-    {
-        var failures = new List<ImportFailure>();
-        var accepted = new List<ImportRequest>();
-        var taken = Registry.Terminals.Select(t => t.Name).ToHashSet(StringComparer.Ordinal);
-
-        foreach (var request in batch)
-        {
-            if (request.Definition.Validate() is { } error)
-            {
-                failures.Add(new ImportFailure(request.Definition.Name, error));
-                continue;
-            }
-
-            if (!taken.Add(request.Definition.Name))
-            {
-                failures.Add(new ImportFailure(request.Definition.Name, $"Name '{request.Definition.Name}' is already in use."));
-                continue;
-            }
-
-            accepted.Add(request);
-        }
-
-        if (accepted.Count == 0)
-        {
-            return failures;
-        }
-
-        // Register every accepted row first: Bind raises WindowAppeared, and the handler needs
-        // to find the definition to colorize and hide the taskbar button.
-        Registry = Registry with { Terminals = [.. Registry.Terminals, .. accepted.Select(a => a.Definition)] };
-
-        var bound = new List<string>();
-        foreach (var request in accepted)
-        {
-            try
-            {
-                _tracker.Bind(request.Definition.Name, request.Hwnd);
-                bound.Add(request.Definition.Name);
-            }
-            catch (ArgumentException ex)
-            {
-                _log.LogWarning(ex, "Import failed for '{Name}'", request.Definition.Name);
-                failures.Add(new ImportFailure(request.Definition.Name, "That window is gone; refresh the list."));
-            }
-        }
-
-        // A window that vanished mid-import leaves no registry row behind.
-        var lost = accepted.Select(a => a.Definition.Name).Except(bound, StringComparer.Ordinal).ToHashSet(StringComparer.Ordinal);
-        if (lost.Count > 0)
-        {
-            Registry = Registry with { Terminals = Registry.Terminals.Where(t => !lost.Contains(t.Name)).ToList() };
-        }
-
-        await PersistAsync();
-        RegistryChanged?.Invoke();
-        _log.LogInformation("Imported {Count} window(s), {Failed} failed", bound.Count, failures.Count);
-        return failures;
     }
 
     /// <summary>

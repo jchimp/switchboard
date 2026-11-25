@@ -4,8 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using Microsoft.Extensions.Logging;
-using Switchboard.Core.Registry;
 using Switchboard.App.ViewModels;
+using Switchboard.Core.Registry;
 using Switchboard.Windows;
 
 namespace Switchboard.App.Settings;
@@ -19,13 +19,11 @@ namespace Switchboard.App.Settings;
 public partial class SettingsWindow : Window
 {
     private readonly SettingsViewModel _vm;
-    private readonly Func<ImportViewModel> _importViewModel;
     private readonly ILogger<SettingsWindow> _log;
 
-    public SettingsWindow(SettingsViewModel vm, Func<ImportViewModel> importViewModel, ILogger<SettingsWindow> log)
+    public SettingsWindow(SettingsViewModel vm, ILogger<SettingsWindow> log)
     {
         _vm = vm;
-        _importViewModel = importViewModel;
         _log = log;
         DataContext = vm;
         InitializeComponent();
@@ -34,7 +32,6 @@ public partial class SettingsWindow : Window
         // given the remembered size, not grow from the default's corner afterwards.
         ApplyLayout(vm.Layout);
         SourceInitialized += (_, _) => DarkTitleBar.Apply(new WindowInteropHelper(this).Handle);
-        vm.Terminals.ImportRequested += ShowImportDialog;
 
         // Hidden, not closed, between uses: re-check the WT files each time it is shown.
         IsVisibleChanged += (_, e) =>
@@ -45,12 +42,6 @@ public partial class SettingsWindow : Window
                 vm.Terminals.RefreshFromDisk();
             }
         };
-    }
-
-    private void ShowImportDialog()
-    {
-        var dialog = new ImportWindowsDialog(_importViewModel()) { Owner = this };
-        dialog.ShowDialog();
     }
 
     /// <summary>Opens the window, or brings it forward when it is already up.</summary>

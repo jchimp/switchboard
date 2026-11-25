@@ -1,6 +1,6 @@
 # ADR-0020: Switchboard never adopts a window by its title
 
-**Status:** Accepted · 2026-11-22 · Supersedes the title pass of ADR-0002, amends PRD R7
+**Status:** Accepted · 2026-11-22 · Supersedes the title pass of ADR-0002, amends PRD R7 · Amended by ADR-0025 (Settings import removed)
 
 ## Context
 Switchboard is meant to be a dock for a fixed set of about five terminals. Terminals the user

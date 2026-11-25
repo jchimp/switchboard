@@ -6,6 +6,20 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+### Changed
+
+- **A new install starts with a settings file.** The first time Switchboard runs, it writes
+  `%APPDATA%\Switchboard\switchboard.json` with every default and four ready terminals,
+  `term-1` to `term-4` on jump keys 1 to 4, so the dock is usable straight away. When the
+  private Windows Terminal copy is installed, Settings → General → Terminal host folder shows
+  its path instead of an empty box.
+
+### Removed
+
+- **Import from running windows.** The bulk import button in Settings → Terminals is gone.
+  Add terminals with "+ Add terminal" or a quick launch; to take over a stray window from the
+  private terminal host, use "Adopt as…" in the rail's menu.
+
 ## 0.1.3 (2026-11-23)
 
 ### Added
