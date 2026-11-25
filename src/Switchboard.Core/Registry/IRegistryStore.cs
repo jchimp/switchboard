@@ -13,4 +13,10 @@ public interface IRegistryStore
     /// absent. Cleared by the next save, which always writes the current name.
     /// </summary>
     bool AdoptedLegacyFile { get; }
+
+    /// <summary>
+    /// True when the last load found no registry file at all, current or legacy: a first run.
+    /// Cleared by the next save.
+    /// </summary>
+    bool FoundNoFile { get; }
 }
