@@ -11,6 +11,17 @@ place on every run; `-NoTerminalHost` opts out. Fresh install, same version, old
 (keeps `settings\`, drops stale files), no marker, and host-running were run against a scratch
 folder with the real WT zip; dry runs with and without `-NoTerminalHost` pass.
 
+ADR-0025 (branch `first-run-defaults`): a first run with no `switchboard.json` writes every
+default plus starter terminals `term-1`…`term-4` and, when the host is installed, sets the host folder to
+`%LOCALAPPDATA%\Switchboard\wt`. Settings → Terminals "Import from running windows" is
+removed; the rail's "Adopt as…" stays. Store tests pass; the checks below are open.
+
+## First-run checks
+- [ ] Rename `%APPDATA%\Switchboard` and start Switchboard → `switchboard.json` exists at once with every setting and `term-1`…`term-4` (jump keys 1–4, distinct colors), shown closed in the rail and launchable; `terminalHost.folder` is `%LOCALAPPDATA%\\Switchboard\\wt`; Settings → General shows that path with no red error
+- [ ] Same with `%LOCALAPPDATA%\Switchboard\wt` renamed too → the file is written, `terminalHost.folder` is absent, launches use the installed WT
+- [ ] An existing `switchboard.json` with no folder set → not rewritten at startup, folder stays empty
+- [ ] Settings → Terminals has no "Import from running windows"; the rail's "Adopt as…" still lists and adopts an unbound host window
+
 ## Installer checks
 - [x] `.\scripts\release.ps1 -Apply` → the zip has `install.ps1` and `uninstall.ps1` at its root
 - [x] Unzip in Explorer, run `install.ps1` from Windows PowerShell → Start Menu has Switchboard, it starts with no SmartScreen prompt, Settings > Apps lists Switchboard 0.x with its icon
