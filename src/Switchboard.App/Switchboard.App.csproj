@@ -9,7 +9,7 @@
     <ApplicationIcon>..\..\assets\icon\switchboard.ico</ApplicationIcon>
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-    <Version>0.1.5</Version>
+    <Version>0.1.6</Version>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Switchboard.Core\Switchboard.Core.csproj" />

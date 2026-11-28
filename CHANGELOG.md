@@ -6,6 +6,8 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+## 0.1.6 (2026-11-27)
+
 ### Changed
 
 - **New installs hide terminals from the taskbar.** Switchboard's terminals no longer each take
