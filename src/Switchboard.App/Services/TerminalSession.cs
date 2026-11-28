@@ -437,6 +437,7 @@ public sealed class TerminalSession : IDisposable
     /// </remarks>
     public async Task ApplySettingsAsync(RegistryFile updated)
     {
+        var wasHiding = Registry.HideFromTaskbar;
         Registry = updated with
         {
             Terminals = Registry.Terminals,
@@ -444,6 +445,14 @@ public sealed class TerminalSession : IDisposable
         };
 
         _status.ReplaceGlobalRules(Registry.GlobalStatusRules);
+
+        // Our own save mutes the watcher, so the hot-reload path that would re-apply this never
+        // runs; without it the flag reaches only windows bound later (ADR-0009, ADR-0018).
+        if (Registry.HideFromTaskbar != wasHiding)
+        {
+            ReapplyTaskbarVisibility();
+        }
+
         await PersistAsync();
         RegistryChanged?.Invoke();
     }
