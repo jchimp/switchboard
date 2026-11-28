@@ -16,6 +16,17 @@ default plus starter terminals `term-1`…`term-4` and, when the host is install
 `%LOCALAPPDATA%\Switchboard\wt`. Settings → Terminals "Import from running windows" is
 removed; the rail's "Adopt as…" stays. Store tests pass; the checks below are open.
 
+## WinEvent hook checks (branch `narrow-winevent-hooks`)
+The tracker installs three narrow hooks instead of one 0x0003–0x800C range (review H-3). Builds;
+the measurement and checks below are open.
+- [ ] CPU, `main` vs this branch: with Switchboard running, move the mouse in circles while running
+  `Get-Counter '\Process(Switchboard)\% Processor Time' -SampleInterval 1 -MaxSamples 20 | ForEach-Object { $_.CounterSamples.CookedValue } | Measure-Object -Average`
+  → the branch average is lower; record both numbers here
+- [ ] `$Host.UI.RawUI.WindowTitle = 'building'` in a bound terminal → its strip segment shows Working
+- [ ] Click between two terminals → the active glow and the border color follow focus
+- [ ] Close a terminal → its segment shows Closed
+- [ ] Launch a closed terminal → it binds (color applied) and takes focus
+
 ## Attention pulse checks (branch `attention-pulse-glow`)
 - [x] Put a terminal in Attention → its segment pulses brighter than before (about 1.6 s per cycle) and its color glows into the segments beside it, in step with the flash
 - [x] Focus it → the pulse and the glow stop; the segment shows the normal active glow
