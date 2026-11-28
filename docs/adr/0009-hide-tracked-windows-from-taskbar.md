@@ -19,3 +19,17 @@ Taskbar crowding is a founding problem (PRD problem 2), but nothing in the desig
 - A minimized hidden window is reachable only through Switchboard or Alt-Tab. That is the product working as intended, but it is why the flag defaults off.
 - If Switchboard crashes, buttons stay hidden until the next Explorer restart or Switchboard relaunch. Windows remain fully usable meanwhile.
 - On Windows 11 "combine taskbar buttons" the sprawl is already one icon; this flag mainly serves "never combine / show labels" setups.
+
+## Amendment (2026-11-27): on by default
+Switchboard is now a dock and launcher for its own private terminal host (ADR-0021), so every
+bound window is one Switchboard launched, and the strip, rail, switcher and jump keys are the way
+to reach it. A taskbar button per terminal is the sprawl this product exists to remove.
+
+- `hideFromTaskbar` now defaults to **true**. New installs (ADR-0025 writes every default on
+  first run) and files without the key get it on.
+- No migration. Every file written since 0.1.4 already holds an explicit value, and "chose off"
+  cannot be told apart from "never touched it", so existing files keep what they say.
+- Changing the flag in Settings now re-applies to every bound window at once. Before this, the
+  settings save muted the hot reload that did the re-apply, so it reached only later binds.
+- The consequence above stands and is accepted: while Switchboard is not running, a hidden,
+  minimized terminal is reachable only through Alt-Tab.

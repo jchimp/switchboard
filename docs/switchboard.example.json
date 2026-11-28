@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "hideFromTaskbar": false,
+  "hideFromTaskbar": true,
   "terminalHost": { "folder": "%LOCALAPPDATA%\\Switchboard\\wt" },
   "settingsWindow": { "width": 1240, "height": 760, "editorWidth": 440 },
   "strip": { "edge": "top", "thickness": 8, "activeThickness": 14, "openRailOnHover": true, "reserveScreenSpace": false,

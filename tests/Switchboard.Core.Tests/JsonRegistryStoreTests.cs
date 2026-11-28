@@ -73,7 +73,7 @@ public sealed class JsonRegistryStoreTests : IDisposable
             """);
 
         var loaded = await new JsonRegistryStore(path).LoadAsync();
-        Assert.False(loaded.HideFromTaskbar);
+        Assert.True(loaded.HideFromTaskbar);
         Assert.False(loaded.Strip.AutoHide);
         Assert.Equal(2, loaded.Strip.HiddenThickness);
         Assert.Equal(800, loaded.Strip.CollapseDelayMs);
@@ -179,17 +179,30 @@ public sealed class JsonRegistryStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task An_explicit_hide_from_taskbar_false_survives_the_default_turning_on()
+    {
+        var path = PathFor("switchboard.json");
+        Directory.CreateDirectory(_dir);
+        await File.WriteAllTextAsync(path, """
+            { "version": 1, "hideFromTaskbar": false, "terminals": [] }
+            """);
+
+        var loaded = await new JsonRegistryStore(path).LoadAsync();
+        Assert.False(loaded.HideFromTaskbar);
+    }
+
+    [Fact]
     public async Task Taskbar_and_auto_hide_settings_round_trip()
     {
         var store = new JsonRegistryStore(PathFor("switchboard.json"));
         await store.SaveAsync(new RegistryFile
         {
-            HideFromTaskbar = true,
+            HideFromTaskbar = false, // the non-default value, so the round trip proves something
             Strip = new StripSettings { AutoHide = true, HiddenThickness = 3, CollapseDelayMs = 500 },
         });
 
         var loaded = await store.LoadAsync();
-        Assert.True(loaded.HideFromTaskbar);
+        Assert.False(loaded.HideFromTaskbar);
         Assert.True(loaded.Strip.AutoHide);
         Assert.Equal(3, loaded.Strip.HiddenThickness);
         Assert.Equal(500, loaded.Strip.CollapseDelayMs);

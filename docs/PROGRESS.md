@@ -16,6 +16,14 @@ default plus starter terminals `term-1`…`term-4` and, when the host is install
 `%LOCALAPPDATA%\Switchboard\wt`. Settings → Terminals "Import from running windows" is
 removed; the rail's "Adopt as…" stays. Store tests pass; the checks below are open.
 
+## Taskbar hide default checks (branch `taskbar-hide-default`)
+`hideFromTaskbar` defaults to on for new installs (ADR-0009 amendment); changing it in Settings
+now re-applies to open windows. Store tests pass; the checks below are open.
+- [ ] 3 terminals open, box unticked, then tick Settings → Edge strip → "Hide bound windows from the taskbar" → all 3 buttons leave the taskbar within about 1 s
+- [ ] Untick it → all 3 buttons come back
+- [ ] Quit Switchboard, rename `switchboard.json`, start it → the new file has `"hideFromTaskbar": true` and the starter terminals open with no taskbar buttons
+- [ ] Flag on: minimize and restore a bound window, then run `Write-Host "$([char]27)]9;4;1;50$([char]7)"` in it → no button comes back (if one does, that is review finding M-2; separate PR)
+
 ## WinEvent hook checks (branch `narrow-winevent-hooks`)
 The tracker installs three narrow hooks instead of one 0x0003–0x800C range (review H-3). Builds;
 the measurement and checks below are open.
