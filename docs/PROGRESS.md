@@ -16,6 +16,13 @@ default plus starter terminals `term-1`…`term-4` and, when the host is install
 `%LOCALAPPDATA%\Switchboard\wt`. Settings → Terminals "Import from running windows" is
 removed; the rail's "Adopt as…" stays. Store tests pass; the checks below are open.
 
+## Launch guard checks (branch `launch-in-flight-guard`)
+A second activation of a terminal whose window is still opening is dropped (review H-2).
+`PendingLaunches` tests pass; the checks below are open.
+- [ ] Close `term-2`, press `Ctrl+Alt+2` three times quickly → one WT window opens, gets its color and takes focus
+- [ ] Double-click a closed terminal's strip segment → one window opens
+- [ ] Set the terminal host folder to an empty folder, click a closed terminal (fails), fix the folder, click again at once → the second click launches
+
 ## Attention pulse checks (branch `attention-pulse-glow`)
 - [x] Put a terminal in Attention → its segment pulses brighter than before (about 1.6 s per cycle) and its color glows into the segments beside it, in step with the flash
 - [x] Focus it → the pulse and the glow stop; the segment shows the normal active glow

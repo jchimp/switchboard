@@ -15,8 +15,9 @@ namespace Switchboard.App.Services;
 /// </summary>
 public sealed class TerminalSession : IDisposable
 {
-    // Mirrors the tracker's pending-window timeout: a focus request older than this is stale.
-    private static readonly TimeSpan FocusOnAppearTimeout = TimeSpan.FromSeconds(15);
+    // Mirrors the tracker's pending-window timeout: past it the window will not bind, so the
+    // launch is no longer in flight and a late bind must not steal focus.
+    private static readonly TimeSpan LaunchTimeout = TimeSpan.FromSeconds(15);
 
     // Covers the store's tmp-write → bak-copy → rename burst so we don't reload our own saves.
     private static readonly TimeSpan SelfWriteMute = TimeSpan.FromSeconds(2);
@@ -37,7 +38,7 @@ public sealed class TerminalSession : IDisposable
     private readonly TimeProvider _time;
     private readonly System.Windows.Threading.Dispatcher _dispatcher;
     private readonly System.Windows.Threading.DispatcherTimer _tick;
-    private readonly Dictionary<string, DateTimeOffset> _focusOnAppear = new(StringComparer.Ordinal);
+    private readonly PendingLaunches _launches;
     private readonly MruList _mru = new();
     private readonly System.Windows.Threading.DispatcherTimer _cycleTimer;
     private StatusEngine _status;
@@ -63,6 +64,7 @@ public sealed class TerminalSession : IDisposable
         _time = time;
         _dispatcher = System.Windows.Threading.Dispatcher.CurrentDispatcher;
         _status = new StatusEngine(time, StatusRule.Defaults);
+        _launches = new PendingLaunches(time, LaunchTimeout);
         _tick = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _tick.Tick += (_, _) =>
         {
@@ -256,13 +258,30 @@ public sealed class TerminalSession : IDisposable
 
     public async Task LaunchAsync(TerminalDefinition def)
     {
+        // A cold WT takes a second or more to show its window, and until it binds the name looks
+        // closed. A second click or jump key in that gap would open a duplicate window that
+        // never binds, so it is dropped instead.
+        if (_launches.IsInFlight(def.Name))
+        {
+            _log.LogDebug("Launch of '{Name}' already in flight; ignoring", def.Name);
+            return;
+        }
+
         _tracker.ExpectWindow(def.Name);
 
         // A freshly spawned wt.exe has no foreground rights and opens behind us; bring it
         // forward once it binds. Only launches ask for this — recovery/adopt binds must not
         // steal focus.
-        _focusOnAppear[def.Name] = _time.GetUtcNow() + FocusOnAppearTimeout;
-        await _launcher.LaunchAsync(def);
+        _launches.Start(def.Name);
+        try
+        {
+            await _launcher.LaunchAsync(def);
+        }
+        catch
+        {
+            _launches.Cancel(def.Name); // a failed launch must not block the retry for 15 s
+            throw;
+        }
     }
 
     public Task ActivateByJumpKeyAsync(int digit)
@@ -382,6 +401,7 @@ public sealed class TerminalSession : IDisposable
         if (updated.Name != oldName)
         {
             _tracker.Rekey(oldName, updated.Name);
+            _launches.Cancel(oldName); // a launch in flight binds by the old title; let the new name launch
             _status.Renamed(oldName, updated);
             _motion.Forget(oldName); // the new name starts from a fresh pixel baseline
             if (_foregroundName == oldName)
@@ -415,6 +435,7 @@ public sealed class TerminalSession : IDisposable
     {
         Registry = Registry with { Terminals = Registry.Terminals.Where(t => t.Name != name).ToList() };
         _mru.Forget(name);
+        _launches.Cancel(name);
         if (_tracker.Find(name) is { } live)
         {
             _taskbar.Show(live.Hwnd); // the window outlives us; give its button back
@@ -514,6 +535,7 @@ public sealed class TerminalSession : IDisposable
             }
 
             _tracker.Unbind(name);
+            _launches.Cancel(name);
             _status.WindowGone(name);
         }
 
@@ -624,8 +646,7 @@ public sealed class TerminalSession : IDisposable
 
     private void OnWindowAppeared(TrackedWindow tw)
     {
-        var focusRequested = _focusOnAppear.Remove(tw.Name, out var deadline)
-                             && deadline >= _time.GetUtcNow();
+        var focusRequested = _launches.Complete(tw.Name);
 
         if (Definition(tw.Name) is not { } def)
         {

@@ -6,6 +6,11 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+### Fixed
+
+- **No more duplicate windows.** Pressing a jump key twice, or clicking a closed terminal twice,
+  while its window is still opening now opens one window, not two.
+
 ## 0.1.5 (2026-11-24)
 
 ### Changed
