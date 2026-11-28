@@ -37,6 +37,18 @@ A second activation of a terminal whose window is still opening is dropped (revi
 - [x] With auto-hide on and the strip collapsed, Attention → the strip stays a sliver, the pulse shows in it; the strip slides out only on hover
 - [ ] With auto-hide on and the strip out (pointer on it), Attention then move the pointer away → the strip collapses after the normal delay while the terminal still pulses
 - [ ] Two terminals in Attention → both pulse; CPU use for Switchboard stays low in Task Manager
+
+## WinEvent hook checks (branch `narrow-winevent-hooks`)
+The tracker installs three narrow hooks instead of one 0x0003–0x800C range (review H-3). Builds;
+the measurement and checks below are open.
+- [ ] CPU, `main` vs this branch: with Switchboard running, move the mouse in circles while running
+  `Get-Counter '\Process(Switchboard)\% Processor Time' -SampleInterval 1 -MaxSamples 20 | ForEach-Object { $_.CounterSamples.CookedValue } | Measure-Object -Average`
+  → the branch average is lower; record both numbers here
+- [ ] `$Host.UI.RawUI.WindowTitle = 'building'` in a bound terminal → its strip segment shows Working
+- [ ] Click between two terminals → the active glow and the border color follow focus
+- [ ] Close a terminal → its segment shows Closed
+- [ ] Launch a closed terminal → it binds (color applied) and takes focus
+
 ADR-0026 (branch `settings-general-startup-about`): Settings → General has a start-at-sign-in
 checkbox backed by the Startup-folder shortcut, an About section, and the Settings buttons
 have their own template so hover, pressed and disabled stay readable. Builds; the checks below
