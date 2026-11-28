@@ -1,5 +1,6 @@
 docs/private/
 *.local.md
+.review/
 
 *.tmp*
 *.bak*
