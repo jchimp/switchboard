@@ -25,9 +25,22 @@ public sealed class WindowTracker : IDisposable
     private readonly Dictionary<string, TrackedWindow> _byName = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DateTimeOffset> _pending = new(StringComparer.Ordinal);
 
-    // Keep the delegate alive; the hook holds a raw function pointer to it.
+    /// <summary>
+    /// The only events <see cref="OnWinEvent"/> handles, as narrow hook ranges. One hook from
+    /// FOREGROUND to NAMECHANGE would also take LOCATIONCHANGE (every cursor and caret move in
+    /// every app), STATECHANGE, menu and move/size events, each posted to the UI thread only to
+    /// be dropped.
+    /// </summary>
+    private static readonly (uint Min, uint Max)[] HookRanges =
+    [
+        (NativeMethods.EVENT_SYSTEM_FOREGROUND, NativeMethods.EVENT_SYSTEM_FOREGROUND),
+        (NativeMethods.EVENT_OBJECT_DESTROY, NativeMethods.EVENT_OBJECT_SHOW),
+        (NativeMethods.EVENT_OBJECT_NAMECHANGE, NativeMethods.EVENT_OBJECT_NAMECHANGE),
+    ];
+
+    // Keep the delegate alive; the hooks hold a raw function pointer to it.
     private readonly NativeMethods.WinEventProc _callback;
-    private nint _hook;
+    private readonly List<nint> _hooks = [];
 
     public WindowTracker(ILogger<WindowTracker> log, TimeProvider time, TerminalHost host)
     {
@@ -62,22 +75,28 @@ public sealed class WindowTracker : IDisposable
 
     public void Start()
     {
-        if (_hook != 0)
+        if (_hooks.Count != 0)
         {
             return;
         }
 
-        _hook = NativeMethods.SetWinEventHook(
-            NativeMethods.EVENT_SYSTEM_FOREGROUND, NativeMethods.EVENT_OBJECT_NAMECHANGE,
-            0, _callback, 0, 0,
-            NativeMethods.WINEVENT_OUTOFCONTEXT | NativeMethods.WINEVENT_SKIPOWNPROCESS);
-
-        if (_hook == 0)
+        foreach (var (min, max) in HookRanges)
         {
-            throw new InvalidOperationException("SetWinEventHook failed.");
+            var hook = NativeMethods.SetWinEventHook(
+                min, max, 0, _callback, 0, 0,
+                NativeMethods.WINEVENT_OUTOFCONTEXT | NativeMethods.WINEVENT_SKIPOWNPROCESS);
+
+            if (hook == 0)
+            {
+                // Half a hook set would track some events and silently miss others.
+                Unhook();
+                throw new InvalidOperationException($"SetWinEventHook failed for events 0x{min:X4}-0x{max:X4}.");
+            }
+
+            _hooks.Add(hook);
         }
 
-        _log.LogInformation("WinEvent hook installed");
+        _log.LogInformation("WinEvent hooks installed ({Count})", _hooks.Count);
     }
 
     /// <summary>Call right before launching <paramref name="name"/> so the next matching window binds to it.</summary>
@@ -155,13 +174,16 @@ public sealed class WindowTracker : IDisposable
         return bound;
     }
 
-    public void Dispose()
+    public void Dispose() => Unhook();
+
+    private void Unhook()
     {
-        if (_hook != 0)
+        foreach (var hook in _hooks)
         {
-            NativeMethods.UnhookWinEvent(_hook);
-            _hook = 0;
+            NativeMethods.UnhookWinEvent(hook);
         }
+
+        _hooks.Clear();
     }
 
     private void OnWinEvent(nint hook, uint eventType, nint hwnd, int idObject, int idChild, uint thread, uint time)
