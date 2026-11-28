@@ -24,6 +24,13 @@ now re-applies to open windows. Store tests pass; the checks below are open.
 - [ ] Quit Switchboard, rename `switchboard.json`, start it → the new file has `"hideFromTaskbar": true` and the starter terminals open with no taskbar buttons
 - [ ] Flag on: minimize and restore a bound window, then run `Write-Host "$([char]27)]9;4;1;50$([char]7)"` in it → no button comes back (if one does, that is review finding M-2; separate PR)
 
+## Attention pulse checks (branch `attention-pulse-glow`)
+- [x] Put a terminal in Attention → its segment pulses brighter than before (about 1.6 s per cycle) and its color glows into the segments beside it, in step with the flash
+- [x] Focus it → the pulse and the glow stop; the segment shows the normal active glow
+- [x] With auto-hide on and the strip collapsed, Attention → the strip stays a sliver, the pulse shows in it; the strip slides out only on hover
+- [ ] With auto-hide on and the strip out (pointer on it), Attention then move the pointer away → the strip collapses after the normal delay while the terminal still pulses
+- [ ] Two terminals in Attention → both pulse; CPU use for Switchboard stays low in Task Manager
+
 ## WinEvent hook checks (branch `narrow-winevent-hooks`)
 The tracker installs three narrow hooks instead of one 0x0003–0x800C range (review H-3). Builds;
 the measurement and checks below are open.
@@ -35,12 +42,6 @@ the measurement and checks below are open.
 - [ ] Close a terminal → its segment shows Closed
 - [ ] Launch a closed terminal → it binds (color applied) and takes focus
 
-## Attention pulse checks (branch `attention-pulse-glow`)
-- [x] Put a terminal in Attention → its segment pulses brighter than before (about 1.6 s per cycle) and its color glows into the segments beside it, in step with the flash
-- [x] Focus it → the pulse and the glow stop; the segment shows the normal active glow
-- [x] With auto-hide on and the strip collapsed, Attention → the strip stays a sliver, the pulse shows in it; the strip slides out only on hover
-- [ ] With auto-hide on and the strip out (pointer on it), Attention then move the pointer away → the strip collapses after the normal delay while the terminal still pulses
-- [ ] Two terminals in Attention → both pulse; CPU use for Switchboard stays low in Task Manager
 ADR-0026 (branch `settings-general-startup-about`): Settings → General has a start-at-sign-in
 checkbox backed by the Startup-folder shortcut, an About section, and the Settings buttons
 have their own template so hover, pressed and disabled stay readable. Builds; the checks below
