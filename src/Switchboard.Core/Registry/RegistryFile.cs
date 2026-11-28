@@ -24,8 +24,11 @@ public sealed record RegistryFile
     /// <summary>Rules applied to every terminal after its own rules. Sensible defaults ship in <see cref="StatusRule.Defaults"/>.</summary>
     public IReadOnlyList<StatusRule> GlobalStatusRules { get; init; } = StatusRule.Defaults;
 
-    /// <summary>Remove bound windows' taskbar buttons while bound; restored on unbind and on exit (ADR-0009).</summary>
-    public bool HideFromTaskbar { get; init; }
+    /// <summary>
+    /// Remove bound windows' taskbar buttons while bound; restored on unbind and on exit. On by
+    /// default since ADR-0009's amendment; files that already say false keep it.
+    /// </summary>
+    public bool HideFromTaskbar { get; init; } = true;
 
     /// <summary>Detect output in unfocused terminals by sampling window pixels (ADR-0013).</summary>
     public bool ThumbnailMotionEnabled { get; init; } = true;

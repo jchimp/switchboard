@@ -38,6 +38,12 @@ public sealed class RegistryFileTests
     }
 
     [Fact]
+    public void First_run_hides_bound_windows_from_the_taskbar()
+    {
+        Assert.True(RegistryFile.FirstRun.HideFromTaskbar);
+    }
+
+    [Fact]
     public void Empty_still_has_no_terminals()
     {
         Assert.Empty(RegistryFile.Empty.Terminals);

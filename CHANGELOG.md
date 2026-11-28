@@ -6,6 +6,18 @@ that section into the release section and its text becomes the GitHub release no
 
 ## Unreleased
 
+### Changed
+
+- **New installs hide terminals from the taskbar.** Switchboard's terminals no longer each take
+  a taskbar button on a fresh install; use the strip, rail, switcher or jump keys to reach them.
+  An existing setup keeps its current choice. To turn it on, tick Settings → Edge strip → "Hide bound
+  windows from the taskbar".
+
+### Fixed
+
+- **The taskbar setting applies straight away.** Ticking or unticking "Hide bound windows from
+  the taskbar" now changes the terminals that are already open, not only ones opened later.
+
 ## 0.1.5 (2026-11-24)
 
 ### Changed
